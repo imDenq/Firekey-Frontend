@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './pages/ProtectedRoute';
 import Credentials from './pages/Credentials';
+import SharedCredential from './pages/SharedCredential';
+import ShareManager from './pages/ShareManager';
 
 // IMPORTER Profile
 import Profile from './pages/Profile';
@@ -45,6 +47,21 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Page Shares protégée */}
+        <Route
+          path="/shares"
+          element={
+            <ProtectedRoute>
+              <ShareManager />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Page pour accéder à un credential partagé - accessible sans authentification */}
+        <Route path="/share/:shareId/:accessKey" element={<SharedCredential />} />
+
+
       </Routes>
     </Router>
   );

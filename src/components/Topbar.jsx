@@ -1,5 +1,5 @@
 // src/components/Topbar.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -16,7 +16,9 @@ import {
   ListItemText,
   Tooltip,
   Chip,
-  useTheme
+  useTheme,
+  Popover,
+  CircularProgress
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import NotificationsIcon from '@mui/icons-material/Notifications'
@@ -26,6 +28,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import SecurityIcon from '@mui/icons-material/Security'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
+import NotificationsList from './notifications/NotificationsList'
 import { styled, alpha } from '@mui/material/styles'
 
 // Styled components
@@ -58,6 +61,20 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
   },
 }));
 
+const NotificationBadge = styled(Badge)(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    right: -3,
+    top: 0,
+    padding: '0 4px',
+    backgroundColor: '#f44336',
+    color: '#ffffff',
+    minWidth: 16,
+    height: 16,
+    fontSize: '0.6rem',
+    borderRadius: 8,
+  },
+}));
+
 const StyledMenu = styled(Menu)(({ theme }) => ({
   '& .MuiPaper-root': {
     backgroundColor: '#1e1e1e',
@@ -81,6 +98,21 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
   },
 }));
 
+const StyledNotificationsPanel = styled(Popover)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+    minWidth: 320,
+    maxWidth: 400,
+    width: '90vw',
+    maxHeight: '80vh',
+    overflowY: 'hidden',
+    color: '#ffffff',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+}));
+
 export default function Topbar({ drawerWidth = 240 }) {
   const navigate = useNavigate()
   const theme = useTheme()
@@ -90,10 +122,100 @@ export default function Topbar({ drawerWidth = 240 }) {
   const [notificationAnchor, setNotificationAnchor] = useState(null)
   const open = Boolean(anchorEl)
   const notificationsOpen = Boolean(notificationAnchor)
+  
+  // Nouveaux états pour les informations utilisateur
+  const [userName, setUserName] = useState('Utilisateur')
+  const [userEmail, setUserEmail] = useState('exemple@domaine.com')
+  const [profilePic, setProfilePic] = useState('/default_profile.png')
+  
+  // État pour le nombre de notifications non lues
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+  const [loadingNotifications, setLoadingNotifications] = useState(false)
+
+  // Récupérer les informations utilisateur au chargement du composant
+  useEffect(() => {
+    fetchUserInfo()
+    fetchUnreadNotificationsCount()
+    
+    // Mettre à jour le compteur de notifications toutes les 60 secondes
+    const intervalId = setInterval(fetchUnreadNotificationsCount, 60000);
+    
+    // Nettoyer l'intervalle à la destruction du composant
+    return () => clearInterval(intervalId);
+  }, [])
+
+  // Fonction pour récupérer les informations utilisateur
+  const fetchUserInfo = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken')
+      if (!accessToken) return
+      
+      const res = await fetch('http://localhost:8001/auth/users/me/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+      
+      if (!res.ok) {
+        throw new Error('Impossible de récupérer les informations utilisateur')
+      }
+      
+      const data = await res.json()
+      
+      // Mettre à jour le nom et l'email
+      setUserName(data.profile?.fullName || data.username || 'Utilisateur')
+      setUserEmail(data.email || 'exemple@domaine.com')
+      
+      // Mettre à jour la photo de profil avec anti-cache
+      if (data.profile?.profile_pic) {
+        let profilePicUrl = data.profile.profile_pic
+        if (!profilePicUrl.startsWith('http')) {
+          const timestamp = new Date().getTime()
+          profilePicUrl = `http://localhost:8001${profilePicUrl}?t=${timestamp}`
+        }
+        console.log('URL photo de profil dans Topbar:', profilePicUrl)
+        setProfilePic(profilePicUrl)
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des informations utilisateur:', error)
+    }
+  }
+  
+  // Fonction pour récupérer le nombre de notifications non lues
+  const fetchUnreadNotificationsCount = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken')
+      if (!accessToken) return
+      
+      setLoadingNotifications(true)
+      
+      const res = await fetch('http://localhost:8001/notifications/notifications/unread_count/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+      
+      if (!res.ok) {
+        throw new Error('Impossible de récupérer le compteur de notifications')
+      }
+      
+      const data = await res.json()
+      setUnreadNotificationsCount(data.count || 0)
+    } catch (error) {
+      console.error('Erreur lors de la récupération du compteur de notifications:', error)
+    } finally {
+      setLoadingNotifications(false)
+    }
+  }
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget)
   }
+  
   const handleMenuClose = () => {
     setAnchorEl(null)
   }
@@ -104,6 +226,8 @@ export default function Topbar({ drawerWidth = 240 }) {
   
   const handleNotificationsClose = () => {
     setNotificationAnchor(null)
+    // Mettre à jour le compteur après fermeture, en cas de modification
+    fetchUnreadNotificationsCount()
   }
 
   // Gérer le clic sur "Profile"
@@ -120,6 +244,14 @@ export default function Topbar({ drawerWidth = 240 }) {
     handleMenuClose()
     navigate('/')
   }
+  
+  // Gérer la navigation vers la page de notifications
+  const handleViewAllNotifications = () => {
+    handleNotificationsClose()
+    // Pour l'instant, redirection vers le profil ou tableau de bord
+    // À l'avenir, on pourrait créer une page dédiée
+    navigate('/profile')
+  }
 
   return (
     <AppBar
@@ -135,12 +267,12 @@ export default function Topbar({ drawerWidth = 240 }) {
     >
       <Toolbar sx={{ justifyContent: 'space-between', height: 70 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography 
+          {/* <Typography 
             variant="h6" 
             component="div" 
             sx={{ 
               fontWeight: 600, 
-              background: 'linear-gradient(90deg, #90caf9 0%, #64b5f6 100%)',
+              background: "linear-gradient(45deg,rgb(57, 139, 206) 20%,rgb(187, 19, 238) 90%)",
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               fontSize: '1.5rem',
@@ -149,20 +281,22 @@ export default function Topbar({ drawerWidth = 240 }) {
           >
             FireKey™
           </Typography>
-          
-          <Chip 
+           */}
+          {/* <Chip 
             label="BETA" 
             size="small" 
             color="primary" 
             variant="outlined" 
-            sx={{ 
+            sx={{
+              mb: -0.7,
+              ml: -1, 
               height: 22, 
               fontSize: '0.7rem', 
               fontWeight: 'bold',
               color: '#90caf9',
               borderColor: 'rgba(144, 202, 249, 0.5)'
             }} 
-          />
+          /> */}
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -185,13 +319,21 @@ export default function Topbar({ drawerWidth = 240 }) {
               color="inherit"
               onClick={handleNotificationsOpen}
               sx={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } 
+                backgroundColor: notificationsOpen ? 'rgba(144, 202, 249, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                '&:hover': { backgroundColor: notificationsOpen ? 'rgba(144, 202, 249, 0.25)' : 'rgba(255, 255, 255, 0.08)' } 
               }}
             >
-              <Badge badgeContent={3} color="error">
-                <NotificationsIcon sx={{ fontSize: 22, color: '#b0b0b0' }} />
-              </Badge>
+              {loadingNotifications ? (
+                <CircularProgress size={20} sx={{ color: '#b0b0b0' }} />
+              ) : (
+                <NotificationBadge 
+                  badgeContent={unreadNotificationsCount} 
+                  color="error"
+                  invisible={unreadNotificationsCount === 0}
+                >
+                  <NotificationsIcon sx={{ fontSize: 22, color: notificationsOpen ? '#90caf9' : '#b0b0b0' }} />
+                </NotificationBadge>
+              )}
             </IconButton>
           </Tooltip>
 
@@ -211,7 +353,7 @@ export default function Topbar({ drawerWidth = 240 }) {
                   variant="dot"
                 >
                   <Avatar
-                    src="/default_profile.png"
+                    src={profilePic}
                     alt="Photo de profil"
                     sx={{ 
                       width: 36, 
@@ -237,15 +379,15 @@ export default function Topbar({ drawerWidth = 240 }) {
           >
             <Box sx={{ px: 2, py: 1.5, textAlign: 'center' }}>
               <Avatar
-                src="/default_profile.png"
+                src={profilePic}
                 alt="Photo de profil"
                 sx={{ width: 60, height: 60, mx: 'auto', mb: 1 }}
               />
               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#ffffff' }}>
-                Thomas Dupont
+                {userName}
               </Typography>
               <Typography variant="body2" sx={{ color: '#b0b0b0', fontSize: '0.8rem' }}>
-                thomas.dupont@example.com
+                {userEmail}
               </Typography>
             </Box>
 
@@ -282,88 +424,22 @@ export default function Topbar({ drawerWidth = 240 }) {
             </MenuItem>
           </StyledMenu>
 
-          {/* Menu des notifications */}
-          <StyledMenu
-            anchorEl={notificationAnchor}
+          {/* Panneau des notifications */}
+          <StyledNotificationsPanel
             open={notificationsOpen}
+            anchorEl={notificationAnchor}
             onClose={handleNotificationsClose}
-            TransitionComponent={Grow}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            sx={{ mt: 1.5 }}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
           >
-            <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#ffffff' }}>
-                Notifications
-              </Typography>
-              <Chip 
-                label="3 nouvelles" 
-                size="small" 
-                color="primary" 
-                sx={{ height: 24, fontSize: '0.75rem' }} 
-              />
-            </Box>
-
-            <Divider />
-
-            <MenuItem>
-              <Box sx={{ py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, color: '#ffffff' }}>
-                  Mot de passe faible détecté
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#b0b0b0', display: 'block' }}>
-                  Mettez à jour le credential "Gmail" avec un mot de passe plus fort
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#90caf9', fontSize: '0.7rem' }}>
-                  il y a 5 minutes
-                </Typography>
-              </Box>
-            </MenuItem>
-
-            <MenuItem>
-              <Box sx={{ py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, color: '#ffffff' }}>
-                  Nouvelle connexion détectée
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#b0b0b0', display: 'block' }}>
-                  Connexion depuis Paris, France sur Chrome
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#90caf9', fontSize: '0.7rem' }}>
-                  aujourd'hui à 15:45
-                </Typography>
-              </Box>
-            </MenuItem>
-
-            <MenuItem>
-              <Box sx={{ py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, color: '#ffffff' }}>
-                  Mise à jour du système
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#b0b0b0', display: 'block' }}>
-                  FireKey a été mis à jour vers la version 2.1.0
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#90caf9', fontSize: '0.7rem' }}>
-                  il y a 2 jours
-                </Typography>
-              </Box>
-            </MenuItem>
-
-            <Divider />
-
-            <Box sx={{ textAlign: 'center', py: 1.5 }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#90caf9',
-                  cursor: 'pointer',
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-                onClick={handleNotificationsClose}
-              >
-                Voir toutes les notifications
-              </Typography>
-            </Box>
-          </StyledMenu>
+            <NotificationsList onClose={handleViewAllNotifications} />
+          </StyledNotificationsPanel>
         </Box>
       </Toolbar>
     </AppBar>
