@@ -1,5 +1,6 @@
 // src/components/notifications/NotificationsList.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -27,6 +28,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const StyledButton = styled(Button)(({ theme, variant }) => ({
   borderRadius: 8,
@@ -76,23 +78,26 @@ const getAvatarColor = (level) => {
 };
 
 const NotificationsList = ({ onClose }) => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const accessToken = localStorage.getItem('accessToken') || '';
+
+  // Limiter le nombre de notifications affichées dans le dropdown
+  const maxVisibleNotifications = 3;
 
   // Charger les notifications au montage du composant
   useEffect(() => {
     fetchNotifications();
-    console.log("Chargement des notifications...");
   }, []);
 
   // Fonction pour récupérer les notifications
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      console.log("Appel API pour récupérer les notifications");
       const response = await fetch('http://localhost:8001/notifications/notifications/', {
         method: 'GET',
         headers: {
@@ -106,37 +111,38 @@ const NotificationsList = ({ onClose }) => {
       }
 
       const responseText = await response.text();
-      console.log("Réponse brute:", responseText);
       
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (e) {
-        console.error("Erreur lors du parsing JSON:", e);
         throw new Error("Format de réponse invalide");
       }
       
-      console.log("Données de réponse:", data);
+      let notificationsList = [];
+      let total = 0;
       
       // Vérifier la structure des données
-      if (data && Array.isArray(data)) {
-        // Si data est directement un tableau
-        setNotifications(data);
-        const unread = data.filter(notification => !notification.read).length;
-        setUnreadCount(unread);
+      if (Array.isArray(data)) {
+        notificationsList = data;
+        total = data.length;
       } else if (data && data.results && Array.isArray(data.results)) {
-        // Si data contient un champ results qui est un tableau (pagination)
-        setNotifications(data.results);
-        const unread = data.results.filter(notification => !notification.read).length;
-        setUnreadCount(unread);
+        notificationsList = data.results;
+        total = data.count || data.results.length;
       } else if (data && data.count !== undefined && data.count === 0) {
-        // Si aucun résultat n'est retourné mais format valide
-        setNotifications([]);
-        setUnreadCount(0);
+        notificationsList = [];
+        total = 0;
       } else {
-        console.error("Format de données inattendu:", data);
         throw new Error("Format de données inattendu");
       }
+      
+      // N'afficher que les 3 dernières notifications
+      const limitedNotifications = notificationsList.slice(0, maxVisibleNotifications);
+      setNotifications(limitedNotifications);
+      setTotalCount(total);
+      
+      const unread = notificationsList.filter(notification => !notification.read).length;
+      setUnreadCount(unread);
     } catch (error) {
       console.error('Erreur:', error);
       setError(error.message);
@@ -201,28 +207,10 @@ const NotificationsList = ({ onClose }) => {
     }
   };
 
-  // Supprimer les notifications lues
-  const clearReadNotifications = async () => {
-    try {
-      const response = await fetch('http://localhost:8001/notifications/notifications/clear_all/', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la suppression des notifications');
-      }
-
-      // Mettre à jour l'état local (ne garder que les non lues)
-      setNotifications(prev => 
-        prev.filter(notif => !notif.read)
-      );
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
+  // Naviguer vers la page de notifications complète
+  const handleViewAllNotifications = () => {
+    onClose(); // Fermer le dropdown
+    navigate('/notifications'); // Rediriger vers la page de notifications
   };
 
   // Afficher un indicateur de chargement
@@ -291,11 +279,6 @@ const NotificationsList = ({ onClose }) => {
           <Tooltip title="Tout marquer comme lu">
             <IconButton size="small" onClick={markAllAsRead} sx={{ color: '#90caf9' }}>
               <DoneAllIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Supprimer les notifications lues">
-            <IconButton size="small" onClick={clearReadNotifications} sx={{ color: '#b0b0b0' }}>
-              <DeleteSweepIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -423,12 +406,15 @@ const NotificationsList = ({ onClose }) => {
         }}
       >
         <StyledButton
-          variant="text"
+          variant="contained" 
           color="primary"
-          onClick={onClose}
+          onClick={handleViewAllNotifications}
           fullWidth
+          endIcon={<ArrowForwardIcon />}
         >
-          Voir toutes les notifications
+          {totalCount > maxVisibleNotifications 
+            ? `Voir toutes les notifications (${totalCount})` 
+            : 'Gérer mes notifications'}
         </StyledButton>
       </Box>
     </Box>

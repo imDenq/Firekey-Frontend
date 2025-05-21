@@ -229,7 +229,7 @@ export default function Sidebar({ drawerWidth = 240 }) {
             {userName}
           </Typography>
           <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
-            Plan Premium
+            Plan Gratuit
           </Typography>
         </Box>
       </Box>
@@ -306,20 +306,20 @@ export default function Sidebar({ drawerWidth = 240 }) {
           </StyledListItemButton>
 
           <StyledListItemButton
-            active={isActive("/categories") ? 1 : 0}
-            onClick={() => handleNavigation("/categories")}
+            active={isActive("/notifications") ? 1 : 0}
+            onClick={() => handleNavigation("/notifications")}
           >
             <StyledListItemIcon>
               <CategoryIcon
-                sx={{ color: isActive("/categories") ? "#90caf9" : "#b0b0b0" }}
+                sx={{ color: isActive("/notifications") ? "#90caf9" : "#b0b0b0" }}
               />
             </StyledListItemIcon>
             <ListItemText
-              primary="Catégories"
+              primary="Notifications"
               primaryTypographyProps={{
                 fontSize: 14,
-                fontWeight: isActive("/categories") ? 600 : 400,
-                color: isActive("/categories") ? "#ffffff" : "#e0e0e0",
+                fontWeight: isActive("/notifications") ? 600 : 400,
+                color: isActive("/notifications") ? "#ffffff" : "#e0e0e0",
               }}
             />
           </StyledListItemButton>

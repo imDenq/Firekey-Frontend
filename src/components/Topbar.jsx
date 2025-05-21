@@ -248,9 +248,7 @@ export default function Topbar({ drawerWidth = 240 }) {
   // Gérer la navigation vers la page de notifications
   const handleViewAllNotifications = () => {
     handleNotificationsClose()
-    // Pour l'instant, redirection vers le profil ou tableau de bord
-    // À l'avenir, on pourrait créer une page dédiée
-    navigate('/profile')
+    navigate('/notifications')
   }
 
   return (

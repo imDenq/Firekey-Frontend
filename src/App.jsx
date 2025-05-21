@@ -7,6 +7,8 @@ import ProtectedRoute from './pages/ProtectedRoute';
 import Credentials from './pages/Credentials';
 import SharedCredential from './pages/SharedCredential';
 import ShareManager from './pages/ShareManager';
+import NotificationsPage from './pages/Notifications';
+import ImportExport from './pages/ImportExport';
 
 // IMPORTER Profile
 import Profile from './pages/Profile';
@@ -54,6 +56,26 @@ function App() {
           element={
             <ProtectedRoute>
               <ShareManager />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Page de Notifications */}
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Page d'Import/Export */}
+        <Route
+          path="/import-export"
+          element={
+            <ProtectedRoute>
+              <ImportExport />
             </ProtectedRoute>
           }
         />
