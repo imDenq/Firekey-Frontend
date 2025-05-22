@@ -271,7 +271,7 @@ Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus
 - 📚 **Documentation** : [Wiki du projet](../../wiki)
 - 🐛 **Bugs** : [Issues GitHub](../../issues)
 - 💡 **Suggestions** : [Discussions GitHub](../../discussions)
-- 📧 **Contact** : support@firekey.app
+- 📧 **Contact** : contact@theokaszak.fr
 
 ### FAQ
 **Q: Comment configurer l'authentification 2FA ?**
