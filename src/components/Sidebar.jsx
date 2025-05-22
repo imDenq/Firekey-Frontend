@@ -444,7 +444,7 @@ export default function Sidebar({ drawerWidth = 240 }) {
 
         <StyledListItemButton
           active={isActive("/settings") ? 1 : 0}
-          onClick={() => handleNavigation("/settings")}
+          onClick={() => handleNavigation("/profile")}
         >
           <StyledListItemIcon>
             <SettingsIcon

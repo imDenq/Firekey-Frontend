@@ -1148,19 +1148,6 @@ const ImportExport = () => {
                     >
                       {source.name}
                     </Typography>
-                    {source.requires_password && (
-                      <Chip
-                        label="Nécessite un mot de passe"
-                        size="small"
-                        sx={{
-                          fontSize: "0.7rem",
-                          bgcolor: alpha("#f44336", 0.1),
-                          color: "#f44336",
-                          mx: "auto",
-                          display: "flex",
-                        }}
-                      />
-                    )}
                   </ImportSourceCard>
                 </Fade>
               </Grid>

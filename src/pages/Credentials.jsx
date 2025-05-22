@@ -32,6 +32,7 @@ import {
   Tab,
   Badge,
 } from "@mui/material";
+
 import { useSnackbar } from "notistack";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -341,6 +342,30 @@ export default function Credentials() {
       sortedCreds.sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
       );
+    } else if (sortType === "strength-strongest") {
+      // Trier par force décroissante (fort -> moyen -> faible)
+      sortedCreds.sort((a, b) => {
+        const strengthOrder = { strong: 3, medium: 2, weak: 1 };
+        const aStrength = strengthOrder[a.strength] || 0;
+        const bStrength = strengthOrder[b.strength] || 0;
+        // Si même force, trier par score
+        if (aStrength === bStrength) {
+          return (b.score || 0) - (a.score || 0);
+        }
+        return bStrength - aStrength;
+      });
+    } else if (sortType === "strength-weakest") {
+      // Trier par force croissante (faible -> moyen -> fort)
+      sortedCreds.sort((a, b) => {
+        const strengthOrder = { strong: 3, medium: 2, weak: 1 };
+        const aStrength = strengthOrder[a.strength] || 0;
+        const bStrength = strengthOrder[b.strength] || 0;
+        // Si même force, trier par score
+        if (aStrength === bStrength) {
+          return (a.score || 0) - (b.score || 0);
+        }
+        return aStrength - bStrength;
+      });
     }
 
     setCredentials(sortedCreds);
@@ -356,6 +381,7 @@ export default function Credentials() {
   // ---------------------------------------
   const fetchCredentials = async () => {
     try {
+      // Récupérer les credentials
       const res = await fetch("http://localhost:8001/api/credentials/", {
         method: "GET",
         headers: {
@@ -363,12 +389,63 @@ export default function Credentials() {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+
       if (!res.ok) {
         throw new Error("Erreur fetch credentials");
       }
-      const data = await res.json();
-      setCredentials(data);
-      setFilteredCredentials(data);
+
+      const credentialsData = await res.json();
+
+      // Récupérer les données de sécurité pour obtenir la force des mots de passe
+      try {
+        const securityRes = await fetch(
+          "http://localhost:8001/api/security/dashboard/",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (securityRes.ok) {
+          const securityData = await securityRes.json();
+
+          // Créer une map des forces de mot de passe par ID
+          const strengthMap = {};
+          if (securityData.recent_credentials) {
+            securityData.recent_credentials.forEach((cred) => {
+              strengthMap[cred.id] = {
+                strength: cred.strength,
+                score: cred.score,
+              };
+            });
+          }
+
+          // Enrichir les credentials avec les données de force
+          const enrichedCredentials = credentialsData.map((cred) => ({
+            ...cred,
+            strength: strengthMap[cred.id]?.strength || "medium",
+            score: strengthMap[cred.id]?.score || 50,
+          }));
+
+          setCredentials(enrichedCredentials);
+          setFilteredCredentials(enrichedCredentials);
+        } else {
+          // Si l'API de sécurité échoue, utiliser les credentials sans enrichissement
+          setCredentials(credentialsData);
+          setFilteredCredentials(credentialsData);
+        }
+      } catch (securityErr) {
+        console.error(
+          "Erreur lors de la récupération des données de sécurité:",
+          securityErr
+        );
+        // Utiliser les credentials sans enrichissement
+        setCredentials(credentialsData);
+        setFilteredCredentials(credentialsData);
+      }
     } catch (err) {
       console.error(err);
       enqueueSnackbar("Impossible de récupérer la liste des credentials", {
@@ -1215,6 +1292,27 @@ export default function Credentials() {
                   <MenuItem onClick={() => handleSort("date-oldest")}>
                     <ListItemText>Plus anciens en premier</ListItemText>
                   </MenuItem>
+                  <Divider
+                    sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                  />
+                  <MenuItem onClick={() => handleSort("strength-strongest")}>
+                    <ListItemIcon>
+                      <SecurityIcon
+                        fontSize="small"
+                        sx={{ color: "#4caf50" }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText>Plus sécurisés en premier</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSort("strength-weakest")}>
+                    <ListItemIcon>
+                      <SecurityIcon
+                        fontSize="small"
+                        sx={{ color: "#f44336" }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText>Moins sécurisés en premier</ListItemText>
+                  </MenuItem>
                 </Menu>
               </Box>
 
@@ -1845,7 +1943,7 @@ export default function Credentials() {
 
                 {/* Sélecteur de tags */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ color: "#b0b0b0", mb: -3 }}>
+                  <Typography variant="body2" sx={{ color: "#b0b0b0", mb: 2 }}>
                     Tags (optionnel)
                   </Typography>
                   <TagSelector

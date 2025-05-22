@@ -9,6 +9,7 @@ import SharedCredential from './pages/SharedCredential';
 import ShareManager from './pages/ShareManager';
 import NotificationsPage from './pages/Notifications';
 import ImportExport from './pages/ImportExport';
+import PasswordHealth from './pages/PasswordHealth';
 
 // IMPORTER Profile
 import Profile from './pages/Profile';
@@ -76,6 +77,16 @@ function App() {
           element={
             <ProtectedRoute>
               <ImportExport />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Page de santé de mot de passe */}
+        <Route
+          path="/password-health"
+          element={
+            <ProtectedRoute>
+              <PasswordHealth />
             </ProtectedRoute>
           }
         />

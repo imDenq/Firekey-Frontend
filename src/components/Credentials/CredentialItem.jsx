@@ -69,9 +69,9 @@ const TagChip = styled(Chip)(({ theme, tagcolor }) => ({
   borderRadius: 16,
   height: 24,
   margin: "0 4px 4px 0",
-  backgroundColor: alpha(tagcolor || '#90caf9', 0.2),
-  color: tagcolor || '#90caf9',
-  fontSize: '0.7rem',
+  backgroundColor: alpha(tagcolor || "#90caf9", 0.2),
+  color: tagcolor || "#90caf9",
+  fontSize: "0.7rem",
   fontWeight: 500,
 }));
 
@@ -134,6 +134,85 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
+// Wrapper pour positionner correctement l'indicateur
+const CredentialWrapper = styled(Box)(({ theme }) => ({
+  position: "relative",
+  width: "100%",
+}));
+
+// Nouvel indicateur de force du mot de passe
+const PasswordStrengthIndicator = styled(Box)(({ strength }) => {
+  const getStrengthColor = () => {
+    switch (strength) {
+      case "strong":
+        return "#4caf50";
+      case "medium":
+        return "#ff9800";
+      case "weak":
+        return "#f44336";
+      default:
+        return "#b0b0b0";
+    }
+  };
+
+  const getStrengthGradient = () => {
+    const color = getStrengthColor();
+    return `linear-gradient(135deg, ${alpha(color, 0.9)} 0%, ${alpha(
+      color,
+      0.6
+    )} 100%)`;
+  };
+
+  return {
+    position: "absolute",
+    top: -24, // Positionné au-dessus de la carte
+    left: -24, // Positionné à gauche de la carte
+    width: 60,
+    height: 60,
+    background: getStrengthGradient(),
+    clipPath: "polygon(0 0, 100% 0, 0 100%)",
+    borderTopLeftRadius: 16, // Correspond au border radius de StyledCard dans Credentials.jsx
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    padding: 6,
+    zIndex: 1,
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background:
+        "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)",
+      borderTopLeftRadius: 16,
+    },
+  };
+});
+
+const StrengthIcon = styled(LockIcon)(({ strength }) => {
+  const getIconColor = () => {
+    switch (strength) {
+      case "strong":
+        return "#ffffff";
+      case "medium":
+        return "#ffffff";
+      case "weak":
+        return "#ffffff";
+      default:
+        return "#ffffff";
+    }
+  };
+
+  return {
+    fontSize: 18,
+    color: getIconColor(),
+    position: "relative",
+    zIndex: 1,
+  };
+});
+
 // Style commun pour les TextField
 const textFieldStyle = {
   "& .MuiOutlinedInput-root": {
@@ -160,7 +239,7 @@ const CredentialItem = ({
   onSensitiveChange,
   onTagAdd,
   onTagRemove,
-  availableTags = []
+  availableTags = [],
 }) => {
   // État pour la modale de partage
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -170,18 +249,33 @@ const CredentialItem = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [accessLimitEnabled, setAccessLimitEnabled] = useState(true);
   const accessToken = localStorage.getItem("accessToken") || "";
-  
+
   // États pour les notifications de copie
   const [copiedPassword, setCopiedPassword] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedNote, setCopiedNote] = useState(false);
-  
+
   // État pour stocker la date de création
   const [creationDate, setCreationDate] = useState("Date inconnue");
-  
+
   // État pour le menu des tags
   const [tagsAnchorEl, setTagsAnchorEl] = useState(null);
   const tagsMenuOpen = Boolean(tagsAnchorEl);
+
+  // État pour la force du mot de passe - utiliser les données du credential si disponibles
+  const [passwordStrength, setPasswordStrength] = useState(
+    cred.strength || "medium"
+  );
+  const [passwordScore, setPasswordScore] = useState(cred.score || 50);
+
+  // Récupérer la force du mot de passe si elle n'est pas fournie
+  useEffect(() => {
+    // Les données de force sont maintenant toujours fournies par le parent
+    if (cred.strength && cred.score !== undefined) {
+      setPasswordStrength(cred.strength);
+      setPasswordScore(cred.score);
+    }
+  }, [cred.strength, cred.score]);
 
   // Récupérer la date de création au chargement du composant
   useEffect(() => {
@@ -192,14 +286,17 @@ const CredentialItem = ({
       // Sinon, essayer de récupérer les détails du credential
       const fetchCredentialDetails = async () => {
         try {
-          const response = await fetch(`http://localhost:8001/api/credentials/${cred.id}/`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
+          const response = await fetch(
+            `http://localhost:8001/api/credentials/${cred.id}/`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
             }
-          });
-          
+          );
+
           if (response.ok) {
             const data = await response.json();
             if (data.created_at) {
@@ -207,10 +304,13 @@ const CredentialItem = ({
             }
           }
         } catch (error) {
-          console.error("Erreur lors de la récupération des détails du credential:", error);
+          console.error(
+            "Erreur lors de la récupération des détails du credential:",
+            error
+          );
         }
       };
-      
+
       // Appeler la fonction de récupération seulement si l'ID est présent
       if (cred.id) {
         fetchCredentialDetails();
@@ -221,18 +321,18 @@ const CredentialItem = ({
   // Formater la date de création
   const formatCreationDate = (dateString) => {
     if (!dateString) return "Date inconnue";
-    
+
     try {
       const date = new Date(dateString);
       // Vérifier si la date est valide
       if (isNaN(date.getTime())) return "Date inconnue";
-      
-      return date.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+
+      return date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch (error) {
       console.error("Erreur de formatage de date:", error);
@@ -269,7 +369,7 @@ const CredentialItem = ({
         });
     }
   };
-  
+
   // Fonction pour copier la note
   const handleCopyNote = () => {
     if (cred.note) {
@@ -314,42 +414,41 @@ const CredentialItem = ({
   // Générer le lien de partage
   const handleGenerateShareLink = async () => {
     setIsGenerating(true);
-    
+
     try {
       // Calculer la date d'expiration côté client
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays);
-      
+
       const payload = {
         credential_id: parseInt(cred.id),
-        expires_at: expiryDate.toISOString(),  // Envoyer la date directement au format ISO
-        max_access_count: accessLimitEnabled ? accessLimit : null
+        expires_at: expiryDate.toISOString(), // Envoyer la date directement au format ISO
+        max_access_count: accessLimitEnabled ? accessLimit : null,
       };
-      
+
       console.log("Payload envoyé:", JSON.stringify(payload));
       console.log("Credential ID:", cred.id, "Type:", typeof cred.id);
-      
-      const response = await fetch('http://localhost:8001/api/shares/', {
-        method: 'POST',
+
+      const response = await fetch("http://localhost:8001/api/shares/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.log("Réponse d'erreur:", errorText);
-        throw new Error('Erreur lors de la génération du lien');
+        throw new Error("Erreur lors de la génération du lien");
       }
-      
+
       const data = await response.json();
       const shareUrl = `http://localhost:5173/share/${data.share_id}`;
       setGeneratedLink(shareUrl);
-      
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error("Erreur:", error);
       // Idéalement utiliser un snackbar ici
     } finally {
       setIsGenerating(false);
@@ -397,176 +496,279 @@ const CredentialItem = ({
 
   // Filtrer les tags non utilisés pour le menu
   const unusedTags = availableTags.filter(
-    tag => !cred.tags || !cred.tags.some(credTag => credTag.id === tag.id)
+    (tag) => !cred.tags || !cred.tags.some((credTag) => credTag.id === tag.id)
   );
 
-  return (
-    <Box>
-      {/* Ligne principale avec le nom et les actions */}
-      <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Grid item xs>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Typography
-              variant="h6"
-              sx={{
-                color: "#ffffff",
-                fontWeight: 600,
-                mr: 2,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {cred.name}
-              {cred.is_sensitive && (
-                <Tooltip title="Credential sensible - Protégé par mot de passe">
-                  <SecurityIcon
-                    sx={{ color: "#f44336", ml: 1, fontSize: 20 }}
-                  />
-                </Tooltip>
-              )}
-            </Typography>
+  // Obtenir le texte de la force du mot de passe
+  const getPasswordStrengthText = () => {
+    switch (passwordStrength) {
+      case "strong":
+        return "Fort";
+      case "medium":
+        return "Moyen";
+      case "weak":
+        return "Faible";
+      default:
+        return "Inconnu";
+    }
+  };
 
-            {cred.website && (
-              <Chip
-                label={cred.website}
-                size="small"
+  return (
+    <CredentialWrapper>
+      {/* Indicateur de force du mot de passe */}
+      <Tooltip
+        title={`Mot de passe ${getPasswordStrengthText()} (Score: ${passwordScore}/100)`}
+        placement="top-start"
+        arrow
+      >
+        <PasswordStrengthIndicator strength={passwordStrength}>
+        </PasswordStrengthIndicator>
+      </Tooltip>
+
+      {/* Contenu du credential */}
+      <Box>
+        {/* Ligne principale avec le nom et les actions */}
+        <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+          <Grid item xs>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Typography
+                variant="h6"
                 sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  color: "#e0e0e0",
-                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  mr: 2,
+                  display: "flex",
+                  alignItems: "center",
                 }}
-                icon={
-                  <LanguageIcon
-                    sx={{
-                      fontSize: "16px !important",
-                      color: "#e0e0e0 !important",
-                    }}
-                  />
-                }
-                onClick={handleOpenWebsite}
-              />
-            )}
-          </Box>
-          
-          {/* Tags sous le titre */}
-          {cred.tags && cred.tags.length > 0 && (
-            <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", mt: 1, mb: 1 }}>
-              {cred.tags.map(tag => (
-                <TagChip
-                  key={tag.id}
-                  label={tag.name}
-                  tagcolor={tag.color}
+              >
+                {cred.name}
+                {cred.is_sensitive && (
+                  <Tooltip title="Credential sensible - Protégé par mot de passe">
+                    <SecurityIcon
+                      sx={{ color: "#f44336", ml: 1, fontSize: 20 }}
+                    />
+                  </Tooltip>
+                )}
+              </Typography>
+
+              {cred.website && (
+                <Chip
+                  label={cred.website}
                   size="small"
-                  onDelete={() => handleRemoveTag(tag.id)}
+                  sx={{
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    color: "#e0e0e0",
+                    "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+                  }}
+                  icon={
+                    <LanguageIcon
+                      sx={{
+                        fontSize: "16px !important",
+                        color: "#e0e0e0 !important",
+                      }}
+                    />
+                  }
+                  onClick={handleOpenWebsite}
                 />
-              ))}
-              {/* Bouton d'ajout de tag */}
-              {unusedTags.length > 0 && (
-                <Tooltip title="Ajouter un tag">
-                  <Chip
-                    icon={<LabelIcon sx={{ fontSize: '18px !important' }} />}
-                    label="+"
-                    size="small"
-                    variant="outlined"
-                    onClick={handleTagsMenuOpen}
-                    sx={{
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      color: '#b0b0b0',
-                      height: 24,
-                      cursor: 'pointer',
-                      ml: 1,
-                      '&:hover': {
-                        borderColor: 'rgba(255, 255, 255, 0.4)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      },
-                    }}
-                  />
-                </Tooltip>
               )}
             </Box>
-          )}
-          
-          {/* Menu pour ajouter des tags */}
-          <Menu
-            anchorEl={tagsAnchorEl}
-            open={tagsMenuOpen}
-            onClose={handleTagsMenuClose}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                backgroundColor: '#1e1e1e',
-                color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: 2,
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3)',
-              },
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ px: 2, py: 1 }}>
-              Ajouter un tag
-            </Typography>
-            <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', mb: 1 }} />
-            {unusedTags.length === 0 ? (
-              <MenuItem disabled>
-                <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
-                  Aucun tag disponible
-                </Typography>
-              </MenuItem>
-            ) : (
-              unusedTags.map(tag => (
-                <MenuItem key={tag.id} onClick={() => handleAddTag(tag.id)}>
-                  <LabelIcon sx={{ mr: 1, color: tag.color }} fontSize="small" />
-                  <Typography variant="body2">{tag.name}</Typography>
-                </MenuItem>
-              ))
+
+            {/* Tags sous le titre */}
+            {cred.tags && cred.tags.length > 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  mt: 1,
+                  mb: 1,
+                }}
+              >
+                {cred.tags.map((tag) => (
+                  <TagChip
+                    key={tag.id}
+                    label={tag.name}
+                    tagcolor={tag.color}
+                    size="small"
+                    onDelete={() => handleRemoveTag(tag.id)}
+                  />
+                ))}
+                {/* Bouton d'ajout de tag */}
+                {unusedTags.length > 0 && (
+                  <Tooltip title="Ajouter un tag">
+                    <Chip
+                      icon={<LabelIcon sx={{ fontSize: "18px !important" }} />}
+                      label="+"
+                      size="small"
+                      variant="outlined"
+                      onClick={handleTagsMenuOpen}
+                      sx={{
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                        color: "#b0b0b0",
+                        height: 24,
+                        cursor: "pointer",
+                        ml: 1,
+                        "&:hover": {
+                          borderColor: "rgba(255, 255, 255, 0.4)",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        },
+                      }}
+                    />
+                  </Tooltip>
+                )}
+              </Box>
             )}
-          </Menu>
-          
-          {/* Date de création - utilise l'état local pour afficher la date */}
-          <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-            <EventIcon sx={{ color: "#b0b0b0", fontSize: 16, mr: 0.5 }} />
-            <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
-              Créé le {creationDate}
-            </Typography>
-          </Box>
+
+            {/* Menu pour ajouter des tags */}
+            <Menu
+              anchorEl={tagsAnchorEl}
+              open={tagsMenuOpen}
+              onClose={handleTagsMenuClose}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  backgroundColor: "#1e1e1e",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: 2,
+                  boxShadow: "0 8px 16px rgba(0, 0, 0, 0.3)",
+                },
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ px: 2, py: 1 }}>
+                Ajouter un tag
+              </Typography>
+              <Divider
+                sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", mb: 1 }}
+              />
+              {unusedTags.length === 0 ? (
+                <MenuItem disabled>
+                  <Typography variant="body2" sx={{ color: "#b0b0b0" }}>
+                    Aucun tag disponible
+                  </Typography>
+                </MenuItem>
+              ) : (
+                unusedTags.map((tag) => (
+                  <MenuItem key={tag.id} onClick={() => handleAddTag(tag.id)}>
+                    <LabelIcon
+                      sx={{ mr: 1, color: tag.color }}
+                      fontSize="small"
+                    />
+                    <Typography variant="body2">{tag.name}</Typography>
+                  </MenuItem>
+                ))
+              )}
+            </Menu>
+
+            {/* Date de création - utilise l'état local pour afficher la date */}
+            <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+              <EventIcon sx={{ color: "#b0b0b0", fontSize: 16, mr: 0.5 }} />
+              <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
+                Créé le {creationDate}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Tooltip title="Partager">
+                <ActionButton onClick={handleOpenShareModal}>
+                  <ShareIcon fontSize="small" sx={{ color: "#4caf50" }} />
+                </ActionButton>
+              </Tooltip>
+              <Tooltip title="Modifier">
+                <ActionButton onClick={() => onEdit(cred)}>
+                  <EditIcon fontSize="small" sx={{ color: "#90caf9" }} />
+                </ActionButton>
+              </Tooltip>
+              <Tooltip title="Supprimer">
+                <ActionButton onClick={() => onDelete(cred)}>
+                  <DeleteIcon fontSize="small" sx={{ color: "#f44336" }} />
+                </ActionButton>
+              </Tooltip>
+            </Box>
+          </Grid>
         </Grid>
 
-        <Grid item>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Tooltip title="Partager">
-              <ActionButton onClick={handleOpenShareModal}>
-                <ShareIcon fontSize="small" sx={{ color: "#4caf50" }} />
-              </ActionButton>
-            </Tooltip>
-            <Tooltip title="Modifier">
-              <ActionButton onClick={() => onEdit(cred)}>
-                <EditIcon fontSize="small" sx={{ color: "#90caf9" }} />
-              </ActionButton>
-            </Tooltip>
-            <Tooltip title="Supprimer">
-              <ActionButton onClick={() => onDelete(cred)}>
-                <DeleteIcon fontSize="small" sx={{ color: "#f44336" }} />
-              </ActionButton>
-            </Tooltip>
-          </Box>
-        </Grid>
-      </Grid>
+        <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", mb: 2 }} />
 
-      <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", mb: 2 }} />
+        <Grid container spacing={3}>
+          {/* Informations du credential */}
+          <Grid item xs={12} md={8}>
+            {cred.email && (
+              <InfoField>
+                <EmailIcon sx={{ color: "#b0b0b0", mr: 2, fontSize: 20 }} />
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="#e0e0e0">
+                    {cred.email}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  {copiedEmail && (
+                    <Chip
+                      label="Copié !"
+                      size="small"
+                      color="success"
+                      sx={{ height: 24, mr: 1 }}
+                    />
+                  )}
+                  <Tooltip title="Copier l'email">
+                    <IconButton
+                      size="small"
+                      onClick={handleCopyEmail}
+                      sx={{ color: "#b0b0b0" }}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </InfoField>
+            )}
 
-      <Grid container spacing={3}>
-        {/* Informations du credential */}
-        <Grid item xs={12} md={8}>
-          {cred.email && (
-            <InfoField>
-              <EmailIcon sx={{ color: "#b0b0b0", mr: 2, fontSize: 20 }} />
+            {/* Affichage du mot de passe */}
+            <InfoField
+              sx={{
+                backgroundColor: cred.unlocked
+                  ? "rgba(144, 202, 249, 0.08)"
+                  : "rgba(255, 255, 255, 0.03)",
+                border: cred.unlocked
+                  ? "1px solid rgba(144, 202, 249, 0.2)"
+                  : "none",
+              }}
+            >
+              <LockIcon
+                sx={{
+                  color: cred.unlocked ? "#90caf9" : "#b0b0b0",
+                  mr: 2,
+                  fontSize: 20,
+                }}
+              />
               <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="body2" color="#e0e0e0">
-                  {cred.email}
-                </Typography>
+                {cred.unlocked ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "#ffffff",
+                      fontFamily: "monospace",
+                      fontSize: "1rem",
+                      letterSpacing: "0.5px",
+                      backgroundColor: "rgba(0, 0, 0, 0.2)",
+                      py: "4px",
+                      px: 2,
+                      borderRadius: 1,
+                      display: "inline-block",
+                    }}
+                  >
+                    {cred.password}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" sx={{ color: "#b0b0b0" }}>
+                    •••••••••••••••
+                  </Typography>
+                )}
               </Box>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                {copiedEmail && (
+                {copiedPassword && cred.unlocked && (
                   <Chip
                     label="Copié !"
                     size="small"
@@ -574,247 +776,184 @@ const CredentialItem = ({
                     sx={{ height: 24, mr: 1 }}
                   />
                 )}
-                <Tooltip title="Copier l'email">
+                <Tooltip title={cred.unlocked ? "Masquer" : "Afficher"}>
                   <IconButton
                     size="small"
-                    onClick={handleCopyEmail}
-                    sx={{ color: "#b0b0b0" }}
+                    onClick={() => onTogglePassword(cred)}
+                    sx={{ color: cred.unlocked ? "#90caf9" : "#b0b0b0" }}
                   >
-                    <ContentCopyIcon fontSize="small" />
+                    {cred.unlocked ? (
+                      <VisibilityOffIcon fontSize="small" />
+                    ) : (
+                      <VisibilityIcon fontSize="small" />
+                    )}
                   </IconButton>
                 </Tooltip>
+                {cred.unlocked && (
+                  <Tooltip title="Copier le mot de passe">
+                    <IconButton
+                      size="small"
+                      onClick={handleCopyPassword}
+                      sx={{ color: "#b0b0b0" }}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Box>
             </InfoField>
-          )}
 
-          {/* Affichage du mot de passe */}
-          <InfoField
-            sx={{
-              backgroundColor: cred.unlocked
-                ? "rgba(144, 202, 249, 0.08)"
-                : "rgba(255, 255, 255, 0.03)",
-              border: cred.unlocked
-                ? "1px solid rgba(144, 202, 249, 0.2)"
-                : "none",
-            }}
-          >
-            <LockIcon
-              sx={{
-                color: cred.unlocked ? "#90caf9" : "#b0b0b0",
-                mr: 2,
-                fontSize: 20,
-              }}
-            />
-            <Box sx={{ flexGrow: 1 }}>
-              {cred.unlocked ? (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "#ffffff",
-                    fontFamily: "monospace",
-                    fontSize: "1rem",
-                    letterSpacing: "0.5px",
-                    backgroundColor: "rgba(0, 0, 0, 0.2)",
-                    py: "4px",
-                    px: 2,
-                    borderRadius: 1,
-                    display: "inline-block",
-                  }}
-                >
-                  {cred.password}
-                </Typography>
-              ) : (
-                <Typography variant="body2" sx={{ color: "#b0b0b0" }}>
-                  •••••••••••••••
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              {copiedPassword && cred.unlocked && (
-                <Chip
-                  label="Copié !"
-                  size="small"
-                  color="success"
-                  sx={{ height: 24, mr: 1 }}
-                />
-              )}
-              <Tooltip title={cred.unlocked ? "Masquer" : "Afficher"}>
-                <IconButton
-                  size="small"
-                  onClick={() => onTogglePassword(cred)}
-                  sx={{ color: cred.unlocked ? "#90caf9" : "#b0b0b0" }}
-                >
-                  {cred.unlocked ? (
-                    <VisibilityOffIcon fontSize="small" />
-                  ) : (
-                    <VisibilityIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </Tooltip>
-              {cred.unlocked && (
-                <Tooltip title="Copier le mot de passe">
-                  <IconButton
-                    size="small"
-                    onClick={handleCopyPassword}
-                    sx={{ color: "#b0b0b0" }}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Box>
-          </InfoField>
-
-          {/* Notes - Toujours afficher la section, même si vide */}
-          <Box sx={{ mt: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{ 
-                color: "#b0b0b0", 
-                display: "flex", 
-                alignItems: "center", 
-                mb: 1,
-                fontSize: "0.75rem"
-              }}
-            >
-              <NotesIcon sx={{ fontSize: 16, mr: 0.5, color: "#90caf9" }} />
-              Notes:
-            </Typography>
-            <NotesField isEmpty={!cred.note || cred.note.trim() === ""}>
-              {cred.note && cred.note.trim() !== "" ? (
-                <Box sx={{ position: "relative" }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "#e0e0e0",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      pr: 4, // Espace pour le bouton de copie
-                    }}
-                  >
-                    {cred.note}
-                  </Typography>
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    {copiedNote && (
-                      <Chip
-                        label="Copié !"
-                        size="small"
-                        color="success"
-                        sx={{ height: 20, fontSize: "0.7rem", mr: 1 }}
-                      />
-                    )}
-                    <Tooltip title="Copier la note">
-                      <IconButton
-                        size="small"
-                        onClick={handleCopyNote}
-                        sx={{ color: "#b0b0b0" }}
-                      >
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+            {/* Notes - Toujours afficher la section, même si vide */}
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "#b0b0b0",
+                  display: "flex",
+                  alignItems: "center",
+                  mb: 1,
+                  fontSize: "0.75rem",
+                }}
+              >
+                <NotesIcon sx={{ fontSize: 16, mr: 0.5, color: "#90caf9" }} />
+                Notes:
+              </Typography>
+              <NotesField isEmpty={!cred.note || cred.note.trim() === ""}>
+                {cred.note && cred.note.trim() !== "" ? (
+                  <Box sx={{ position: "relative" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "#e0e0e0",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        pr: 4, // Espace pour le bouton de copie
+                      }}
+                    >
+                      {cred.note}
+                    </Typography>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {copiedNote && (
+                        <Chip
+                          label="Copié !"
+                          size="small"
+                          color="success"
+                          sx={{ height: 20, fontSize: "0.7rem", mr: 1 }}
+                        />
+                      )}
+                      <Tooltip title="Copier la note">
+                        <IconButton
+                          size="small"
+                          onClick={handleCopyNote}
+                          sx={{ color: "#b0b0b0" }}
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Box>
-                </Box>
-              ) : (
-                <Typography
-                  variant="body2"
-                  sx={{ color: "#666", fontStyle: "italic" }}
-                >
-                  Aucune note pour ce credential.
-                </Typography>
-              )}
-            </NotesField>
-          </Box>
-        </Grid>
-
-        {/* Contrôles et options */}
-        <Grid item xs={12} md={4}>
-          <Box
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.02)",
-              borderRadius: 2,
-              p: 2,
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-            }}
-          >
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={cred.is_sensitive}
-                  onChange={(e) => onSensitiveChange(cred, e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={
-                <Box>
+                ) : (
                   <Typography
                     variant="body2"
-                    sx={{ color: "#ffffff", fontWeight: 500 }}
+                    sx={{ color: "#666", fontStyle: "italic" }}
                   >
-                    Protection renforcée
+                    Aucune note pour ce credential.
                   </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "#b0b0b0", display: "block" }}
-                  >
-                    {cred.is_sensitive
-                      ? "Vérification supplémentaire activée"
-                      : "Accessible sans confirmation"}
-                  </Typography>
-                </Box>
-              }
-              sx={{ alignItems: "flex-start", ml: 4, mb: 2 }}
-            />
+                )}
+              </NotesField>
+            </Box>
+          </Grid>
 
+          {/* Contrôles et options */}
+          <Grid item xs={12} md={4}>
             <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.02)",
+                borderRadius: 2,
+                p: 2,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
             >
-              {cred.website && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={cred.is_sensitive}
+                    onChange={(e) => onSensitiveChange(cred, e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "#ffffff", fontWeight: 500 }}
+                    >
+                      Protection renforcée
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "#b0b0b0", display: "block" }}
+                    >
+                      {cred.is_sensitive
+                        ? "Vérification supplémentaire activée"
+                        : "Accessible sans confirmation"}
+                    </Typography>
+                  </Box>
+                }
+                sx={{ alignItems: "flex-start", ml: 4, mb: 2 }}
+              />
+
+              <Box
+                sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
+              >
+                {cred.website && (
+                  <StyledButton
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<OpenInNewIcon />}
+                    onClick={handleOpenWebsite}
+                    size="small"
+                  >
+                    Visiter le site
+                  </StyledButton>
+                )}
+
                 <StyledButton
                   variant="outlined"
-                  color="primary"
-                  startIcon={<OpenInNewIcon />}
-                  onClick={handleOpenWebsite}
+                  color="success"
+                  startIcon={<ShareIcon />}
+                  onClick={handleOpenShareModal}
                   size="small"
                 >
-                  Visiter le site
+                  Partager ce credential
                 </StyledButton>
-              )}
+              </Box>
 
               <StyledButton
-                variant="outlined"
-                color="success"
-                startIcon={<ShareIcon />}
-                onClick={handleOpenShareModal}
-                size="small"
+                variant="contained"
+                color="primary"
+                startIcon={
+                  cred.unlocked ? <VisibilityOffIcon /> : <VisibilityIcon />
+                }
+                onClick={() => onTogglePassword(cred)}
               >
-                Partager ce credential
+                {cred.unlocked ? "Masquer" : "Afficher"}
               </StyledButton>
             </Box>
-
-            <StyledButton
-              variant="contained"
-              color="primary"
-              startIcon={
-                cred.unlocked ? <VisibilityOffIcon /> : <VisibilityIcon />
-              }
-              onClick={() => onTogglePassword(cred)}
-            >
-              {cred.unlocked ? "Masquer" : "Afficher"}
-            </StyledButton>
-          </Box>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
 
       {/* Modale de partage */}
       <StyledDialog
@@ -946,7 +1085,7 @@ const CredentialItem = ({
                     max={10}
                     valueLabelDisplay="auto"
                     aria-labelledby="access-slider"
-                    sx={{ 
+                    sx={{
                       color: "#90caf9",
                       "& .MuiSlider-thumb": {
                         backgroundColor: "#ffffff",
@@ -963,7 +1102,9 @@ const CredentialItem = ({
                       }
                     }}
                     InputProps={{
-                      endAdornment: <InputAdornment position="end">accès</InputAdornment>,
+                      endAdornment: (
+                        <InputAdornment position="end">accès</InputAdornment>
+                      ),
                     }}
                     sx={{ ...textFieldStyle, width: "120px" }}
                   />
@@ -1047,7 +1188,7 @@ const CredentialItem = ({
           )}
         </DialogActions>
       </StyledDialog>
-    </Box>
+    </CredentialWrapper>
   );
 };
 
