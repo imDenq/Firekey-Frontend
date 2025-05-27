@@ -40,6 +40,7 @@ import CredentialItem from "../components/Credentials/CredentialItem";
 import PasswordGenerator from "../components/Credentials/PasswordGenerator";
 import TagsManager from "../components/Credentials/TagsManager";
 import TagSelector from "../components/Credentials/TagSelector";
+import HybridCredentialService from "../services/HybridCredentialService";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -194,6 +195,15 @@ export default function Credentials() {
   const [tags, setTags] = useState([]); // Liste des tags disponibles
   const accessToken = localStorage.getItem("accessToken") || "";
 
+  // NOUVEAUX ÉTATS E2E
+  const [hybridService] = useState(() => new HybridCredentialService());
+  const [e2eStatus, setE2eStatus] = useState({
+    available: false,
+    enabled: false,
+    isNewUser: false,
+  });
+  const [showE2ESetup, setShowE2ESetup] = useState(false);
+
   // États pour les menus
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [sortAnchorEl, setSortAnchorEl] = useState(null);
@@ -241,10 +251,19 @@ export default function Credentials() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState("");
 
-  // Chargement initial
+  // Chargement initial - MODIFIÉ pour E2E
   useEffect(() => {
-    fetchCredentials();
-    fetchTags();
+    const initializeApp = async () => {
+      // Initialiser E2E silencieusement (sans mot de passe pour le moment)
+      const status = await hybridService.initialize();
+      setE2eStatus(status);
+
+      // Charger les credentials et tags
+      await fetchCredentials();
+      await fetchTags();
+    };
+
+    initializeApp();
   }, []);
 
   // Filtrer les credentials quand la recherche change ou le filtre change
@@ -377,26 +396,23 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 1) Récupérer les données
+  // 1) Récupérer les données - MODIFIÉ pour E2E
   // ---------------------------------------
   const fetchCredentials = async () => {
     try {
-      // Récupérer les credentials
-      const res = await fetch("http://localhost:8001/api/credentials/", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      // Utiliser le service hybride au lieu de l'API directe
+      const allCredentials = await hybridService.getAllCredentials();
 
-      if (!res.ok) {
-        throw new Error("Erreur fetch credentials");
-      }
+      // Combiner les credentials E2E et legacy
+      const combinedCredentials = [
+        ...allCredentials.e2e.map((cred) => ({ ...cred, _source: "e2e" })),
+        ...allCredentials.legacy.map((cred) => ({
+          ...cred,
+          _source: "legacy",
+        })),
+      ];
 
-      const credentialsData = await res.json();
-
-      // Récupérer les données de sécurité pour obtenir la force des mots de passe
+      // Enrichir avec les données de sécurité (comme avant)
       try {
         const securityRes = await fetch(
           "http://localhost:8001/api/security/dashboard/",
@@ -411,9 +427,8 @@ export default function Credentials() {
 
         if (securityRes.ok) {
           const securityData = await securityRes.json();
-
-          // Créer une map des forces de mot de passe par ID
           const strengthMap = {};
+
           if (securityData.recent_credentials) {
             securityData.recent_credentials.forEach((cred) => {
               strengthMap[cred.id] = {
@@ -423,8 +438,7 @@ export default function Credentials() {
             });
           }
 
-          // Enrichir les credentials avec les données de force
-          const enrichedCredentials = credentialsData.map((cred) => ({
+          const enrichedCredentials = combinedCredentials.map((cred) => ({
             ...cred,
             strength: strengthMap[cred.id]?.strength || "medium",
             score: strengthMap[cred.id]?.score || 50,
@@ -433,18 +447,13 @@ export default function Credentials() {
           setCredentials(enrichedCredentials);
           setFilteredCredentials(enrichedCredentials);
         } else {
-          // Si l'API de sécurité échoue, utiliser les credentials sans enrichissement
-          setCredentials(credentialsData);
-          setFilteredCredentials(credentialsData);
+          setCredentials(combinedCredentials);
+          setFilteredCredentials(combinedCredentials);
         }
       } catch (securityErr) {
-        console.error(
-          "Erreur lors de la récupération des données de sécurité:",
-          securityErr
-        );
-        // Utiliser les credentials sans enrichissement
-        setCredentials(credentialsData);
-        setFilteredCredentials(credentialsData);
+        console.error("Erreur données de sécurité:", securityErr);
+        setCredentials(combinedCredentials);
+        setFilteredCredentials(combinedCredentials);
       }
     } catch (err) {
       console.error(err);
@@ -479,7 +488,40 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 2) Ajout d'un credential
+  // NOUVELLE FONCTION E2E
+  // ---------------------------------------
+  const initializeE2E = async () => {
+    const userPassword = prompt("Mot de passe pour activer E2E:");
+    if (!userPassword) return;
+
+    try {
+      const status = await hybridService.initialize(userPassword);
+      setE2eStatus(status);
+
+      if (status.e2eEnabled) {
+        enqueueSnackbar("E2E activé avec succès!", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+
+        // Rafraîchir les credentials
+        await fetchCredentials();
+      } else if (status.e2eAvailable) {
+        enqueueSnackbar("Mot de passe incorrect", {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+      }
+    } catch (error) {
+      enqueueSnackbar("Erreur activation E2E", {
+        variant: "error",
+        anchorOrigin: { vertical: "top", horizontal: "right" },
+      });
+    }
+  };
+
+  // ---------------------------------------
+  // 2) Ajout d'un credential - MODIFIÉ pour E2E
   // ---------------------------------------
   const handleOpenAddModal = () => {
     setAddModalOpen(true);
@@ -510,7 +552,8 @@ export default function Credentials() {
     }
 
     try {
-      const body = {
+      // Préparer les données du credential
+      const credentialData = {
         name: newName.trim(),
         website: newWebsite.trim(),
         email: newEmail.trim(),
@@ -519,25 +562,24 @@ export default function Credentials() {
         is_sensitive: newIsSensitive,
         tag_ids: newTags.map((tag) => tag.id),
       };
-      const res = await fetch("http://localhost:8001/api/credentials/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Erreur ajout credential");
+
+      // Utiliser le service hybride
+      const result = await hybridService.saveCredential(credentialData);
+
+      if (result.success) {
+        // Rafraîchir la liste
+        await fetchCredentials();
+
+        enqueueSnackbar(
+          `Credential ajouté avec succès (${result.type.toUpperCase()})`,
+          {
+            variant: "success",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          }
+        );
+
+        handleCloseAddModal();
       }
-      const newCred = await res.json();
-      setCredentials((prev) => [...prev, newCred]);
-      enqueueSnackbar("Credential ajouté avec succès", {
-        variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
-      handleCloseAddModal();
     } catch (err) {
       console.error(err);
       enqueueSnackbar(err.message, {
@@ -555,7 +597,7 @@ export default function Credentials() {
     setEditName(cred.name);
     setEditWebsite(cred.website || "");
     setEditEmail(cred.email || "");
-    setEditNote(cred.note || "");
+    setEditNote(cred.note || cred.notes || "");
     setEditIsSensitive(cred.is_sensitive);
     setEditTags(cred.tags || []);
 
@@ -653,42 +695,32 @@ export default function Credentials() {
         body.password = editPassword;
       }
 
-      const res = await fetch(
-        `http://localhost:8001/api/credentials/${editId}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const apiEndpoint =
+        currentCred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${editId}/`
+          : `http://localhost:8001/api/credentials/${editId}/`;
+
+      const res = await fetch(apiEndpoint, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
 
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Erreur edition credential");
       }
 
-      // Afficher la réponse pour debug
-      const responseText = await res.text();
-
-      let updated = {};
-      try {
-        updated = JSON.parse(responseText);
-      } catch (e) {
-        console.error("Erreur de parsing JSON:", e);
-      }
-
-      setCredentials((prev) =>
-        prev.map((c) => (c.id === editId ? { ...updated, unlocked: false } : c))
-      );
-
       enqueueSnackbar("Credential modifié avec succès", {
         variant: "success",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
 
+      // Rafraîchir la liste
+      await fetchCredentials();
       handleCloseEditModal();
     } catch (err) {
       console.error(err);
@@ -715,25 +747,31 @@ export default function Credentials() {
 
   const handleConfirmDelete = async () => {
     try {
-      const res = await fetch(
-        `http://localhost:8001/api/credentials/${deleteId}/`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const currentCred = credentials.find((c) => c.id === deleteId);
+      const apiEndpoint =
+        currentCred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${deleteId}/`
+          : `http://localhost:8001/api/credentials/${deleteId}/`;
+
+      const res = await fetch(apiEndpoint, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Erreur suppression credential");
       }
-      setCredentials((prev) => prev.filter((c) => c.id !== deleteId));
+
       enqueueSnackbar("Credential supprimé avec succès", {
         variant: "success",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
+
+      // Rafraîchir la liste
+      await fetchCredentials();
       handleCloseDeleteModal();
     } catch (err) {
       console.error(err);
@@ -772,6 +810,19 @@ export default function Credentials() {
   // Déchiffrer un credential non-sensible sans exiger le mot de passe de compte
   const decryptNonSensitive = async (cred) => {
     try {
+      // Pour les credentials E2E, le mot de passe est déjà disponible
+      if (cred._source === "e2e") {
+        setCredentials((prev) =>
+          prev.map((c) => (c.id === cred.id ? { ...c, unlocked: true } : c))
+        );
+        enqueueSnackbar("Mot de passe affiché", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+        return;
+      }
+
+      // Pour les credentials legacy
       const res = await fetch(
         `http://localhost:8001/api/credentials/${cred.id}/decrypt/`,
         {
@@ -829,29 +880,31 @@ export default function Credentials() {
   const patchIsSensitive = async (cred, checked) => {
     try {
       const body = { is_sensitive: checked };
-      const res = await fetch(
-        `http://localhost:8001/api/credentials/${cred.id}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const apiEndpoint =
+        cred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${cred.id}/`
+          : `http://localhost:8001/api/credentials/${cred.id}/`;
+
+      const res = await fetch(apiEndpoint, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Erreur maj "sensible"');
       }
-      const updated = await res.json();
-      setCredentials((prev) =>
-        prev.map((c) => (c.id === cred.id ? updated : c))
-      );
+
       enqueueSnackbar("Modification enregistrée", {
         variant: "success",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
+
+      // Rafraîchir la liste
+      await fetchCredentials();
     } catch (err) {
       console.error(err);
       enqueueSnackbar(err.message, {
@@ -870,17 +923,19 @@ export default function Credentials() {
 
     try {
       // 1) Vérifier le mot de passe de compte
-      const verifyRes = await fetch(
-        `http://localhost:8001/api/credentials/${verifyModalCred.id}/verify/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ password: typedPassword }),
-        }
-      );
+      const apiEndpoint =
+        verifyModalCred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${verifyModalCred.id}/verify/`
+          : `http://localhost:8001/api/credentials/${verifyModalCred.id}/verify/`;
+
+      const verifyRes = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password: typedPassword }),
+      });
       if (!verifyRes.ok) {
         const data = await verifyRes.json();
         throw new Error(data.error || "Erreur de vérification");
@@ -888,65 +943,75 @@ export default function Credentials() {
 
       // 2) Selon le but (unlock ou disableSensitive)
       if (verifyPurpose === "unlock") {
-        // On appelle decrypt
-        const decryptRes = await fetch(
-          `http://localhost:8001/api/credentials/${verifyModalCred.id}/decrypt/`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
+        if (verifyModalCred._source === "e2e") {
+          // Pour E2E, le mot de passe est déjà disponible
+          setCredentials((prev) =>
+            prev.map((c) =>
+              c.id === verifyModalCred.id ? { ...c, unlocked: true } : c
+            )
+          );
+          enqueueSnackbar("Déverrouillé avec succès", {
+            variant: "success",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          });
+        } else {
+          // Pour legacy, on appelle decrypt
+          const decryptRes = await fetch(
+            `http://localhost:8001/api/credentials/${verifyModalCred.id}/decrypt/`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+          if (!decryptRes.ok) {
+            const errData = await decryptRes.json();
+            throw new Error(errData.error || "Impossible de déchiffrer");
           }
-        );
-        if (!decryptRes.ok) {
-          const errData = await decryptRes.json();
-          throw new Error(errData.error || "Impossible de déchiffrer");
-        }
-        const data = await decryptRes.json(); // { password: "..." }
+          const data = await decryptRes.json(); // { password: "..." }
 
-        // On met à jour le credential
-        setCredentials((prev) =>
-          prev.map((c) =>
-            c.id === verifyModalCred.id
-              ? { ...c, password: data.password, unlocked: true }
-              : c
-          )
-        );
-        enqueueSnackbar("Déverrouillé avec succès", {
-          variant: "success",
-          anchorOrigin: { vertical: "top", horizontal: "right" },
-        });
+          // On met à jour le credential
+          setCredentials((prev) =>
+            prev.map((c) =>
+              c.id === verifyModalCred.id
+                ? { ...c, password: data.password, unlocked: true }
+                : c
+            )
+          );
+          enqueueSnackbar("Déverrouillé avec succès", {
+            variant: "success",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          });
+        }
       } else if (verifyPurpose === "disableSensitive") {
         // Vérifier si c'est une modification en attente depuis l'édition
         const pendingEditStr = sessionStorage.getItem("pendingEdit");
 
         if (pendingEditStr) {
-          // C'est une édition complète qui a été interrompue pour vérifier le mot de passe
+          // C'est une édition complète qui a été interrompée pour vérifier le mot de passe
           const pendingEdit = JSON.parse(pendingEditStr);
 
+          const apiEndpoint =
+            verifyModalCred._source === "e2e"
+              ? `http://localhost:8001/api/credentials-e2e/${pendingEdit.id}/`
+              : `http://localhost:8001/api/credentials/${pendingEdit.id}/`;
+
           // Effectuer la mise à jour avec toutes les données d'édition
-          const res = await fetch(
-            `http://localhost:8001/api/credentials/${pendingEdit.id}/`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify(pendingEdit),
-            }
-          );
+          const res = await fetch(apiEndpoint, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(pendingEdit),
+          });
 
           if (!res.ok) {
             const errData = await res.json();
             throw new Error(errData.error || "Erreur edition credential");
           }
-
-          const updated = await res.json();
-          setCredentials((prev) =>
-            prev.map((c) => (c.id === pendingEdit.id ? updated : c))
-          );
 
           // Supprimer les données d'édition en attente
           sessionStorage.removeItem("pendingEdit");
@@ -955,6 +1020,9 @@ export default function Credentials() {
             variant: "success",
             anchorOrigin: { vertical: "top", horizontal: "right" },
           });
+
+          // Rafraîchir la liste
+          await fetchCredentials();
         } else {
           // C'est juste un changement de l'option "sensible" depuis la liste
           await patchIsSensitive(verifyModalCred, false);
@@ -980,33 +1048,32 @@ export default function Credentials() {
 
   const handleAddTag = async (credentialId, tagId) => {
     try {
-      const res = await fetch(
-        `http://localhost:8001/api/credentials/${credentialId}/add_tag/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ tag_id: tagId }),
-        }
-      );
+      const currentCred = credentials.find((c) => c.id === credentialId);
+      const apiEndpoint =
+        currentCred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${credentialId}/add_tag/`
+          : `http://localhost:8001/api/credentials/${credentialId}/add_tag/`;
+
+      const res = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ tag_id: tagId }),
+      });
 
       if (!res.ok) {
         throw new Error("Erreur lors de l'ajout du tag");
       }
 
-      const updatedCred = await res.json();
-
-      // Mettre à jour l'état local
-      setCredentials((prev) =>
-        prev.map((cred) => (cred.id === credentialId ? updatedCred : cred))
-      );
-
       enqueueSnackbar("Tag ajouté avec succès", {
         variant: "success",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
+
+      // Rafraîchir la liste
+      await fetchCredentials();
     } catch (error) {
       console.error("Erreur:", error);
       enqueueSnackbar(error.message, {
@@ -1018,28 +1085,24 @@ export default function Credentials() {
 
   const handleRemoveTag = async (credentialId, tagId) => {
     try {
-      const res = await fetch(
-        `http://localhost:8001/api/credentials/${credentialId}/remove_tag/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ tag_id: tagId }),
-        }
-      );
+      const currentCred = credentials.find((c) => c.id === credentialId);
+      const apiEndpoint =
+        currentCred._source === "e2e"
+          ? `http://localhost:8001/api/credentials-e2e/${credentialId}/remove_tag/`
+          : `http://localhost:8001/api/credentials/${credentialId}/remove_tag/`;
+
+      const res = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ tag_id: tagId }),
+      });
 
       if (!res.ok) {
         throw new Error("Erreur lors de la suppression du tag");
       }
-
-      const updatedCred = await res.json();
-
-      // Mettre à jour l'état local
-      setCredentials((prev) =>
-        prev.map((cred) => (cred.id === credentialId ? updatedCred : cred))
-      );
 
       // Si on filtre actuellement par ce tag, réinitialiser le filtre
       if (activeTagFilter && activeTagFilter.id === tagId) {
@@ -1050,6 +1113,9 @@ export default function Credentials() {
         variant: "success",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
+
+      // Rafraîchir la liste
+      await fetchCredentials();
     } catch (error) {
       console.error("Erreur:", error);
       enqueueSnackbar(error.message, {
@@ -1106,7 +1172,6 @@ export default function Credentials() {
   // Cleanup des éditions en attente
   useEffect(() => {
     sessionStorage.removeItem("pendingEdit");
-    fetchCredentials();
   }, []);
 
   // ---------------------------------------
@@ -1136,6 +1201,42 @@ export default function Credentials() {
             <Typography variant="body1" sx={{ color: "#b0b0b0" }}>
               Gérez et sécurisez vos informations de connexion.
             </Typography>
+          </Box>
+
+          {/* Badge de statut E2E */}
+          <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
+            {e2eStatus.available ? (
+              e2eStatus.enabled ? (
+                <Chip
+                  icon={<SecurityIcon />}
+                  label="E2E Activé"
+                  color="success"
+                  variant="outlined"
+                  sx={{
+                    backgroundColor: alpha("#4caf50", 0.1),
+                    borderColor: "#4caf50",
+                    color: "#4caf50",
+                  }}
+                />
+              ) : (
+                <Chip
+                  icon={<LockIcon />}
+                  label="E2E Disponible - Cliquez pour activer"
+                  color="warning"
+                  variant="outlined"
+                  onClick={initializeE2E}
+                  sx={{
+                    backgroundColor: alpha("#ff9800", 0.1),
+                    borderColor: "#ff9800",
+                    color: "#ff9800",
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor: alpha("#ff9800", 0.15),
+                    },
+                  }}
+                />
+              )
+            ) : null}
           </Box>
 
           <StyledToolbar>
@@ -1655,8 +1756,22 @@ export default function Credentials() {
                     },
                   }}
                 >
-                  Toutes vos informations sont chiffrées côté serveur avec des
-                  standards de sécurité élevés.
+                  {e2eStatus.enabled
+                    ? "Toutes vos informations sont chiffrées de bout en bout et ne peuvent être lues que par vous."
+                    : "Toutes vos informations sont chiffrées côté serveur avec des standards de sécurité élevés."}
+                  {e2eStatus.enabled && (
+                    <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
+                      <SecurityIcon
+                        sx={{ fontSize: 16, mr: 0.5, color: "#4caf50" }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "#4caf50", fontWeight: 500 }}
+                      >
+                        Mode E2E activé
+                      </Typography>
+                    </Box>
+                  )}
                 </Alert>
 
                 <TextField

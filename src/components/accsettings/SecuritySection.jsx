@@ -26,7 +26,7 @@ import {
   Chip,
   Grid,
   Card,
-  CardContent
+  CardContent,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -112,11 +112,11 @@ const SecuritySection = ({
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [twofactorStatus, setTwofactorStatus] = useState({
     isEnabled: false,
-    secret: '',
+    secret: "",
     qrCode: null,
-    isLoading: false
+    isLoading: false,
   });
-  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
 
   // États pour la suppression de compte
   const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
@@ -135,13 +135,16 @@ const SecuritySection = ({
   const fetchUserSessions = async () => {
     setIsLoadingSessions(true);
     try {
-      const response = await fetch('http://localhost:8001/auth/users/sessions/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+      const response = await fetch(
+        "http://localhost:8001/auth/users/sessions/",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -149,14 +152,14 @@ const SecuritySection = ({
       } else {
         enqueueSnackbar("Impossible de récupérer les sessions", {
           variant: "error",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
+          anchorOrigin: { vertical: "top", horizontal: "right" },
         });
       }
     } catch (error) {
       console.error("Erreur lors de la récupération des sessions:", error);
       enqueueSnackbar("Erreur de connexion au serveur", {
         variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
+        anchorOrigin: { vertical: "top", horizontal: "right" },
       });
     } finally {
       setIsLoadingSessions(false);
@@ -166,13 +169,16 @@ const SecuritySection = ({
   // Fonction pour vérifier le statut de la 2FA
   const check2FAStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8001/auth/users/two-factor/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+      const response = await fetch(
+        "http://localhost:8001/auth/users/two-factor/",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -180,13 +186,13 @@ const SecuritySection = ({
           isEnabled: data.is_enabled,
           secret: data.secret,
           qrCode: data.qr_code,
-          isLoading: false
+          isLoading: false,
         });
-        
+
         // Mettre à jour userInfo aussi
-        setUserInfo(prev => ({
+        setUserInfo((prev) => ({
           ...prev,
-          twoFactorEnabled: data.is_enabled
+          twoFactorEnabled: data.is_enabled,
         }));
       }
     } catch (error) {
@@ -238,17 +244,20 @@ const SecuritySection = ({
     setIsChangingPassword(true);
 
     try {
-      const response = await fetch("http://localhost:8001/auth/users/change-password/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      });
+      const response = await fetch(
+        "http://localhost:8001/auth/users/change-password/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -256,7 +265,7 @@ const SecuritySection = ({
       }
 
       const data = await response.json();
-      
+
       // Mettre à jour les tokens
       if (data.access && data.refresh) {
         localStorage.setItem("accessToken", data.access);
@@ -271,10 +280,13 @@ const SecuritySection = ({
       handleClosePasswordModal();
     } catch (err) {
       console.error(err);
-      enqueueSnackbar(err.message || "Erreur lors du changement de mot de passe", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
+      enqueueSnackbar(
+        err.message || "Erreur lors du changement de mot de passe",
+        {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
     } finally {
       setIsChangingPassword(false);
     }
@@ -291,61 +303,79 @@ const SecuritySection = ({
 
   const handleDeleteAllSessions = async () => {
     try {
-      const response = await fetch('http://localhost:8001/auth/users/sessions/?id=all-except-current', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+      const response = await fetch(
+        "http://localhost:8001/auth/users/sessions/?id=all-except-current",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
       if (response.ok) {
         enqueueSnackbar("Toutes les autres sessions ont été déconnectées", {
           variant: "success",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
+          anchorOrigin: { vertical: "top", horizontal: "right" },
         });
         fetchUserSessions();
         handleCloseDeleteSessionsModal();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de la déconnexion des sessions");
+        throw new Error(
+          errorData.error || "Erreur lors de la déconnexion des sessions"
+        );
       }
     } catch (error) {
       console.error("Erreur:", error);
-      enqueueSnackbar(error.message || "Erreur lors de la déconnexion des sessions", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
-      });
+      enqueueSnackbar(
+        error.message || "Erreur lors de la déconnexion des sessions",
+        {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
     }
   };
 
   const handleDeleteSession = async (sessionId) => {
     try {
-      const response = await fetch(`http://localhost:8001/auth/users/sessions/?id=${sessionId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+      const response = await fetch(
+        `http://localhost:8001/auth/users/sessions/?id=${sessionId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
       if (response.ok) {
         enqueueSnackbar("Session déconnectée avec succès", {
           variant: "success",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
+          anchorOrigin: { vertical: "top", horizontal: "right" },
         });
         // Mettre à jour la liste des sessions
-        setSessions(prev => prev.filter(session => session.id !== sessionId));
+        setSessions((prev) =>
+          prev.filter((session) => session.id !== sessionId)
+        );
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de la déconnexion de la session");
+        throw new Error(
+          errorData.error || "Erreur lors de la déconnexion de la session"
+        );
       }
     } catch (error) {
       console.error("Erreur:", error);
-      enqueueSnackbar(error.message || "Erreur lors de la déconnexion de la session", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
-      });
+      enqueueSnackbar(
+        error.message || "Erreur lors de la déconnexion de la session",
+        {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
     }
   };
 
@@ -354,150 +384,176 @@ const SecuritySection = ({
     if (event.target.checked) {
       // Activer la 2FA - Ouvrir la modale de configuration
       setIs2FAModalOpen(true);
-      setTwofactorStatus(prev => ({
+      setTwofactorStatus((prev) => ({
         ...prev,
-        isLoading: true
+        isLoading: true,
       }));
-      
+
       try {
-        const response = await fetch('http://localhost:8001/auth/users/two-factor/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+        const response = await fetch(
+          "http://localhost:8001/auth/users/two-factor/",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
           }
-        });
-        
+        );
+
         if (!response.ok) {
           throw new Error("Erreur lors de la récupération du QR code");
         }
-        
+
         const data = await response.json();
         setTwofactorStatus({
           isEnabled: data.is_enabled,
           secret: data.secret,
           qrCode: data.qr_code,
-          isLoading: false
+          isLoading: false,
         });
       } catch (error) {
         console.error("Erreur:", error);
-        enqueueSnackbar(error.message || "Erreur lors de la génération du QR code", {
-          variant: "error",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
-        });
-        setTwofactorStatus(prev => ({
+        enqueueSnackbar(
+          error.message || "Erreur lors de la génération du QR code",
+          {
+            variant: "error",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          }
+        );
+        setTwofactorStatus((prev) => ({
           ...prev,
-          isLoading: false
+          isLoading: false,
         }));
       }
     } else {
       // Désactiver la 2FA directement
       try {
-        const response = await fetch('http://localhost:8001/auth/users/two-factor/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            enable: false
-          })
-        });
-        
+        const response = await fetch(
+          "http://localhost:8001/auth/users/two-factor/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              enable: false,
+            }),
+          }
+        );
+
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "Erreur lors de la désactivation de l'authentification à deux facteurs");
+          throw new Error(
+            errorData.error ||
+              "Erreur lors de la désactivation de l'authentification à deux facteurs"
+          );
         }
-        
+
         const data = await response.json();
-        setTwofactorStatus(prev => ({
+        setTwofactorStatus((prev) => ({
           ...prev,
-          isEnabled: false
+          isEnabled: false,
         }));
-        
-        setUserInfo(prev => ({
+
+        setUserInfo((prev) => ({
           ...prev,
-          twoFactorEnabled: false
+          twoFactorEnabled: false,
         }));
-        
+
         enqueueSnackbar("Authentification à deux facteurs désactivée", {
           variant: "success",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
+          anchorOrigin: { vertical: "top", horizontal: "right" },
         });
       } catch (error) {
         console.error("Erreur:", error);
-        enqueueSnackbar(error.message || "Erreur lors de la désactivation de l'authentification à deux facteurs", {
-          variant: "error",
-          anchorOrigin: { vertical: "top", horizontal: "right" }
-        });
+        enqueueSnackbar(
+          error.message ||
+            "Erreur lors de la désactivation de l'authentification à deux facteurs",
+          {
+            variant: "error",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          }
+        );
       }
     }
   };
 
   const handleClose2FAModal = () => {
     setIs2FAModalOpen(false);
-    setVerificationCode('');
+    setVerificationCode("");
   };
 
   const handleEnable2FA = async () => {
     if (!verificationCode) {
       enqueueSnackbar("Veuillez saisir le code de vérification", {
         variant: "warning",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
+        anchorOrigin: { vertical: "top", horizontal: "right" },
       });
       return;
     }
-    
+
     try {
-      setTwofactorStatus(prev => ({
+      setTwofactorStatus((prev) => ({
         ...prev,
-        isLoading: true
+        isLoading: true,
       }));
-      
-      const response = await fetch('http://localhost:8001/auth/users/two-factor/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          enable: true,
-          code: verificationCode
-        })
-      });
-      
+
+      const response = await fetch(
+        "http://localhost:8001/auth/users/two-factor/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            enable: true,
+            code: verificationCode,
+          }),
+        }
+      );
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de l'activation de l'authentification à deux facteurs");
+        throw new Error(
+          errorData.error ||
+            "Erreur lors de l'activation de l'authentification à deux facteurs"
+        );
       }
-      
+
       const data = await response.json();
-      setTwofactorStatus(prev => ({
+      setTwofactorStatus((prev) => ({
         ...prev,
         isEnabled: true,
-        isLoading: false
+        isLoading: false,
       }));
-      
-      setUserInfo(prev => ({
+
+      setUserInfo((prev) => ({
         ...prev,
-        twoFactorEnabled: true
+        twoFactorEnabled: true,
       }));
-      
+
       enqueueSnackbar("Authentification à deux facteurs activée avec succès", {
         variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
+        anchorOrigin: { vertical: "top", horizontal: "right" },
       });
-      
+
       handleClose2FAModal();
     } catch (error) {
       console.error("Erreur:", error);
-      enqueueSnackbar(error.message || "Erreur lors de l'activation de l'authentification à deux facteurs", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" }
-      });
-      setTwofactorStatus(prev => ({
+      enqueueSnackbar(
+        error.message ||
+          "Erreur lors de l'activation de l'authentification à deux facteurs",
+        {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
+      setTwofactorStatus((prev) => ({
         ...prev,
-        isLoading: false
+        isLoading: false,
       }));
     }
   };
@@ -526,17 +582,20 @@ const SecuritySection = ({
     setIsDeletingAccount(true);
 
     try {
-      const response = await fetch("http://localhost:8001/auth/users/delete-account/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          password: deleteAccountPassword,
-          confirm_text: deleteAccountText
-        }),
-      });
+      const response = await fetch(
+        "http://localhost:8001/auth/users/delete-account/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            password: deleteAccountPassword,
+            confirm_text: deleteAccountText,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -544,11 +603,14 @@ const SecuritySection = ({
       }
 
       const data = await response.json();
-      
-      enqueueSnackbar("Demande de suppression initiée. Un e-mail de confirmation a été envoyé.", {
-        variant: "info",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
+
+      enqueueSnackbar(
+        "Demande de suppression initiée. Un e-mail de confirmation a été envoyé.",
+        {
+          variant: "info",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
 
       // En production, l'utilisateur recevrait un mail avec un lien.
       // Pour les besoins de la démo, on simule la confirmation immédiate avec le token reçu
@@ -559,10 +621,13 @@ const SecuritySection = ({
       handleCloseDeleteAccountModal();
     } catch (err) {
       console.error(err);
-      enqueueSnackbar(err.message || "Erreur lors de la suppression du compte", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
+      enqueueSnackbar(
+        err.message || "Erreur lors de la suppression du compte",
+        {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        }
+      );
     } finally {
       setIsDeletingAccount(false);
     }
@@ -570,48 +635,103 @@ const SecuritySection = ({
 
   const confirmAccountDeletion = async (token) => {
     try {
-      const response = await fetch(`http://localhost:8001/auth/users/delete-account/?token=${token}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+      const response = await fetch(
+        `http://localhost:8001/auth/confirm-delete-account/?token=${token}`, // Nouvelle URL
+        {
+          method: "GET", // Méthode GET (pas DELETE)
+          headers: {
+            "Content-Type": "application/json",
+            // Pas de header Authorization car la nouvelle vue ne nécessite pas d'authentification
+          },
         }
-      });
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Impossible de confirmer la suppression du compte");
+      // Gestion spéciale pour la suppression de compte
+      if (response.status === 200) {
+        // Succès - compte supprimé
+
+        // Déconnexion immédiate
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+
+        enqueueSnackbar("Votre compte a été supprimé avec succès", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+
+        // Redirection vers la page de connexion
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+
+        return;
       }
 
-      // Déconnexion après suppression
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      
-      enqueueSnackbar("Votre compte a été supprimé avec succès", {
-        variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
-      
-      // Redirection vers la page de connexion
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000);
+      // Si ce n'est pas un succès, essayer de parser la réponse
+      const contentType = response.headers.get("content-type");
+      let errorMessage =
+        "Erreur lors de la confirmation de suppression du compte";
+
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          const data = await response.json();
+          errorMessage = data.error || data.detail || errorMessage;
+        } catch (parseError) {
+          console.error("Erreur de parsing JSON:", parseError);
+        }
+      } else {
+        // Si ce n'est pas du JSON, c'est probablement une page d'erreur HTML
+        const text = await response.text();
+        console.error("Réponse non-JSON reçue:", text.substring(0, 200));
+
+        if (response.status === 500) {
+          errorMessage = "Erreur interne du serveur lors de la suppression";
+        } else if (response.status === 404) {
+          errorMessage = "Endpoint de suppression non trouvé";
+        }
+      }
+
+      throw new Error(errorMessage);
     } catch (err) {
-      console.error(err);
-      enqueueSnackbar(err.message || "Erreur lors de la confirmation de suppression du compte", {
-        variant: "error",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
+      console.error("Erreur lors de la suppression:", err);
+
+      // Si l'erreur contient du HTML (erreur 500 Django), on affiche un message plus clair
+      if (err.message.includes("<!DOCTYPE") || err.message.includes("<html>")) {
+        enqueueSnackbar("Erreur serveur lors de la suppression du compte", {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+      } else {
+        enqueueSnackbar(
+          err.message ||
+            "Erreur lors de la confirmation de suppression du compte",
+          {
+            variant: "error",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          }
+        );
+      }
     }
   };
 
   // Fonction pour choisir l'icône appropriée en fonction du type d'appareil
   const getDeviceIcon = (device) => {
-    if (device.toLowerCase().includes('mobile') || device.toLowerCase().includes('iphone') || device.toLowerCase().includes('android')) {
+    if (
+      device.toLowerCase().includes("mobile") ||
+      device.toLowerCase().includes("iphone") ||
+      device.toLowerCase().includes("android")
+    ) {
       return <SmartphoneIcon />;
-    } else if (device.toLowerCase().includes('tablet') || device.toLowerCase().includes('ipad')) {
+    } else if (
+      device.toLowerCase().includes("tablet") ||
+      device.toLowerCase().includes("ipad")
+    ) {
       return <TabletIcon />;
-    } else if (device.toLowerCase().includes('mac') || device.toLowerCase().includes('windows') || device.toLowerCase().includes('linux')) {
+    } else if (
+      device.toLowerCase().includes("mac") ||
+      device.toLowerCase().includes("windows") ||
+      device.toLowerCase().includes("linux")
+    ) {
       return <LaptopIcon />;
     } else {
       return <ComputerIcon />;
@@ -621,12 +741,12 @@ const SecuritySection = ({
   // Formater date pour affichage
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -733,8 +853,8 @@ const SecuritySection = ({
           Sessions actives
         </Typography>
         {isLoadingSessions ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={40} sx={{ color: '#90caf9' }} />
+          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+            <CircularProgress size={40} sx={{ color: "#90caf9" }} />
           </Box>
         ) : (
           <>
@@ -749,7 +869,9 @@ const SecuritySection = ({
                         backgroundColor: "rgba(255, 255, 255, 0.03)",
                         borderRadius: 2,
                         py: 1,
-                        border: session.is_current ? '1px solid rgba(144, 202, 249, 0.5)' : 'none',
+                        border: session.is_current
+                          ? "1px solid rgba(144, 202, 249, 0.5)"
+                          : "none",
                       }}
                       secondaryAction={
                         !session.is_current && (
@@ -778,15 +900,20 @@ const SecuritySection = ({
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography sx={{ color: "#ffffff", fontWeight: session.is_current ? 500 : 400 }}>
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <Typography
+                              sx={{
+                                color: "#ffffff",
+                                fontWeight: session.is_current ? 500 : 400,
+                              }}
+                            >
                               {session.browser || "Navigateur inconnu"}
                               {session.is_current && (
                                 <Chip
                                   label="Session actuelle"
                                   size="small"
                                   color="primary"
-                                  sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                                  sx={{ ml: 1, height: 20, fontSize: "0.7rem" }}
                                 />
                               )}
                             </Typography>
@@ -794,14 +921,34 @@ const SecuritySection = ({
                         }
                         secondary={
                           <Box>
-                            <Typography variant="body2" sx={{ color: "#b0b0b0", display: 'flex', alignItems: 'center', fontSize: '0.85rem' }}>
-                              {session.location || "Localisation inconnue"} • {session.device || "Appareil inconnu"}
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: "#b0b0b0",
+                                display: "flex",
+                                alignItems: "center",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {session.location || "Localisation inconnue"} •{" "}
+                              {session.device || "Appareil inconnu"}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: "#b0b0b0", display: 'flex', alignItems: 'center', fontSize: '0.8rem', mt: 0.5 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: "#b0b0b0",
+                                display: "flex",
+                                alignItems: "center",
+                                fontSize: "0.8rem",
+                                mt: 0.5,
+                              }}
+                            >
                               <AccessTimeIcon sx={{ fontSize: 12, mr: 0.5 }} />
                               {session.is_current
                                 ? "Maintenant"
-                                : `Dernière activité : ${formatDate(session.last_activity)}`}
+                                : `Dernière activité : ${formatDate(
+                                    session.last_activity
+                                  )}`}
                             </Typography>
                           </Box>
                         }
@@ -809,13 +956,17 @@ const SecuritySection = ({
                     </ListItem>
                   ))}
                 </List>
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+                <Box
+                  sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}
+                >
                   <StyledButton
                     variant="outlined"
                     color="error"
                     startIcon={<DeleteIcon />}
                     onClick={handleOpenDeleteSessionsModal}
-                    disabled={sessions.filter(s => !s.is_current).length === 0}
+                    disabled={
+                      sessions.filter((s) => !s.is_current).length === 0
+                    }
                   >
                     Déconnecter toutes les autres sessions
                   </StyledButton>
@@ -865,8 +1016,8 @@ const SecuritySection = ({
               vos données.
             </Typography>
           </Box>
-          <StyledButton 
-            variant="outlined" 
+          <StyledButton
+            variant="outlined"
             color="error"
             onClick={handleOpenDeleteAccountModal}
           >
@@ -911,9 +1062,13 @@ const SecuritySection = ({
                     aria-label="toggle password visibility"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     edge="end"
-                    sx={{ color: '#b0b0b0' }}
+                    sx={{ color: "#b0b0b0" }}
                   >
-                    {showCurrentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    {showCurrentPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -934,9 +1089,13 @@ const SecuritySection = ({
                     aria-label="toggle password visibility"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     edge="end"
-                    sx={{ color: '#b0b0b0' }}
+                    sx={{ color: "#b0b0b0" }}
                   >
-                    {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    {showNewPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -957,9 +1116,13 @@ const SecuritySection = ({
                     aria-label="toggle password visibility"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     edge="end"
-                    sx={{ color: '#b0b0b0' }}
+                    sx={{ color: "#b0b0b0" }}
                   >
-                    {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    {showConfirmPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -982,7 +1145,7 @@ const SecuritySection = ({
             disabled={isChangingPassword}
           >
             {isChangingPassword ? (
-              <CircularProgress size={24} sx={{ color: '#fff' }} />
+              <CircularProgress size={24} sx={{ color: "#fff" }} />
             ) : (
               "Confirmer"
             )}
@@ -1008,8 +1171,8 @@ const SecuritySection = ({
         </DialogTitle>
         <DialogContent sx={{ pb: 1 }}>
           <Typography variant="body2" sx={{ color: "#b0b0b0", mb: 3 }}>
-            Êtes-vous sûr de vouloir déconnecter toutes vos autres sessions actives ? 
-            Vous resterez connecté uniquement sur l'appareil actuel.
+            Êtes-vous sûr de vouloir déconnecter toutes vos autres sessions
+            actives ? Vous resterez connecté uniquement sur l'appareil actuel.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
@@ -1048,58 +1211,73 @@ const SecuritySection = ({
         </DialogTitle>
         <DialogContent sx={{ pb: 1 }}>
           {twofactorStatus.isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={50} sx={{ color: '#90caf9' }} />
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={50} sx={{ color: "#90caf9" }} />
             </Box>
           ) : (
             <>
               <Typography variant="body2" sx={{ color: "#b0b0b0", mb: 3 }}>
-                Scannez ce QR code avec votre application d'authentification 
-                (Google Authenticator, Authy, etc.) puis entrez le code à 6 chiffres pour activer la 2FA.
+                Scannez ce QR code avec votre application d'authentification
+                (Google Authenticator, Authy, etc.) puis entrez le code à 6
+                chiffres pour activer la 2FA.
               </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
                 {twofactorStatus.qrCode ? (
-                  <Box 
-                    component="img" 
-                    src={`data:image/png;base64,${twofactorStatus.qrCode}`} 
-                    alt="QR Code pour 2FA" 
-                    sx={{ 
-                      width: 200, 
+                  <Box
+                    component="img"
+                    src={`data:image/png;base64,${twofactorStatus.qrCode}`}
+                    alt="QR Code pour 2FA"
+                    sx={{
+                      width: 200,
                       height: 200,
                       p: 2,
-                      backgroundColor: 'white',
+                      backgroundColor: "white",
                       borderRadius: 2,
-                      mb: 2
+                      mb: 2,
                     }}
                   />
                 ) : (
-                  <Box sx={{ 
-                    width: 200, 
-                    height: 200, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderRadius: 2,
-                    mb: 2
-                  }}>
-                    <QrCodeIcon sx={{ fontSize: 80, color: '#90caf9' }} />
+                  <Box
+                    sx={{
+                      width: 200,
+                      height: 200,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      borderRadius: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <QrCodeIcon sx={{ fontSize: 80, color: "#90caf9" }} />
                   </Box>
                 )}
-                
-                <Typography variant="body2" sx={{ color: "#ffffff", fontWeight: 500 }}>
+
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#ffffff", fontWeight: 500 }}
+                >
                   Clé secrète (en cas de problème avec le QR code):
                 </Typography>
-                <Box sx={{ 
-                  p: 1, 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
-                  borderRadius: 1,
-                  fontFamily: 'monospace',
-                  letterSpacing: 1,
-                  color: '#90caf9',
-                  my: 1
-                }}>
+                <Box
+                  sx={{
+                    p: 1,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    borderRadius: 1,
+                    fontFamily: "monospace",
+                    letterSpacing: 1,
+                    color: "#90caf9",
+                    my: 1,
+                  }}
+                >
                   {twofactorStatus.secret}
                 </Box>
               </Box>
@@ -1114,12 +1292,12 @@ const SecuritySection = ({
                 sx={{
                   ...textFieldStyle,
                   mb: 2,
-                  '& input': { letterSpacing: 2, fontFamily: 'monospace' }
+                  "& input": { letterSpacing: 2, fontFamily: "monospace" },
                 }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon sx={{ color: '#90caf9' }} />
+                      <LockIcon sx={{ color: "#90caf9" }} />
                     </InputAdornment>
                   ),
                 }}
@@ -1143,7 +1321,7 @@ const SecuritySection = ({
             disabled={!verificationCode || twofactorStatus.isLoading}
           >
             {twofactorStatus.isLoading ? (
-              <CircularProgress size={24} sx={{ color: '#fff' }} />
+              <CircularProgress size={24} sx={{ color: "#fff" }} />
             ) : (
               "Activer"
             )}
@@ -1180,15 +1358,15 @@ const SecuritySection = ({
               },
             }}
           >
-            Cette action est irréversible. Toutes vos données, credentials et paramètres
-            seront définitivement supprimés.
+            Cette action est irréversible. Toutes vos données, credentials et
+            paramètres seront définitivement supprimés.
           </Alert>
-          
+
           <Typography variant="body2" sx={{ color: "#b0b0b0", mb: 3 }}>
             Pour confirmer la suppression, veuillez saisir votre mot de passe et
             taper "SUPPRIMER" dans le champ de confirmation.
           </Typography>
-          
+
           <TextField
             label="Mot de passe"
             variant="outlined"
@@ -1204,15 +1382,19 @@ const SecuritySection = ({
                     aria-label="toggle password visibility"
                     onClick={() => setShowDeletePassword(!showDeletePassword)}
                     edge="end"
-                    sx={{ color: '#b0b0b0' }}
+                    sx={{ color: "#b0b0b0" }}
                   >
-                    {showDeletePassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    {showDeletePassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
-          
+
           <TextField
             label="Tapez 'SUPPRIMER' pour confirmer"
             variant="outlined"
@@ -1221,10 +1403,11 @@ const SecuritySection = ({
             onChange={(e) => setDeleteAccountText(e.target.value)}
             sx={{
               ...textFieldStyle,
-              '& .MuiOutlinedInput-root': {
-                borderColor: deleteAccountText === 'SUPPRIMER' ? '#f44336' : '#444',
-                ...textFieldStyle['& .MuiOutlinedInput-root']
-              }
+              "& .MuiOutlinedInput-root": {
+                borderColor:
+                  deleteAccountText === "SUPPRIMER" ? "#f44336" : "#444",
+                ...textFieldStyle["& .MuiOutlinedInput-root"],
+              },
             }}
           />
         </DialogContent>
@@ -1241,10 +1424,14 @@ const SecuritySection = ({
             variant="contained"
             color="error"
             onClick={handleDeleteAccount}
-            disabled={deleteAccountText !== "SUPPRIMER" || !deleteAccountPassword || isDeletingAccount}
+            disabled={
+              deleteAccountText !== "SUPPRIMER" ||
+              !deleteAccountPassword ||
+              isDeletingAccount
+            }
           >
             {isDeletingAccount ? (
-              <CircularProgress size={24} sx={{ color: '#fff' }} />
+              <CircularProgress size={24} sx={{ color: "#fff" }} />
             ) : (
               "Supprimer définitivement"
             )}

@@ -1,4 +1,4 @@
-// src/pages/Login.jsx - Ajout du support 2FA avec UI améliorée
+// src/pages/Login.jsx - Ajout du support 2FA avec UI améliorée et thème chaud
 import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
@@ -37,7 +37,7 @@ import SecurityIcon from "@mui/icons-material/Security";
 import LockPersonIcon from "@mui/icons-material/LockPerson";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 
-// Styled components (on conserve les mêmes)
+// Styled components avec thème chaud
 const LoginContainer = styled(Box)(({ theme }) => ({
   width: "100%",
   minHeight: "100vh",
@@ -54,7 +54,7 @@ const GradientBackground = styled(Box)(({ theme }) => ({
   width: "100%",
   height: "100%",
   background:
-    "radial-gradient(circle at top right, rgba(144, 202, 249, 0.1) 0%, rgba(25, 118, 210, 0.05) 35%, rgba(13, 17, 23, 0) 70%)",
+    "radial-gradient(circle at top right, rgba(255, 152, 67, 0.15) 0%, rgba(255, 87, 34, 0.08) 35%, rgba(13, 17, 23, 0) 70%)",
   zIndex: 0,
 }));
 
@@ -65,7 +65,7 @@ const WaveBox = styled(Box)(({ theme }) => ({
   width: "100%",
   height: "25vh",
   backgroundImage:
-    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%231e1e1e' fill-opacity='0.5' d='M0,160L48,138.7C96,117,192,75,288,64C384,53,480,75,576,106.7C672,139,768,181,864,165.3C960,149,1056,75,1152,74.7C1248,75,1344,149,1392,186.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E\")",
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ff5722' fill-opacity='0.3' d='M0,160L48,138.7C96,117,192,75,288,64C384,53,480,75,576,106.7C672,139,768,181,864,165.3C960,149,1056,75,1152,74.7C1248,75,1344,149,1392,186.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E\")",
   backgroundSize: "cover",
   backgroundRepeat: "no-repeat",
   zIndex: 0,
@@ -110,7 +110,7 @@ const CardSide = styled(Paper)(({ back }) => ({
     borderRadius: 16,
     padding: 2,
     background:
-      "linear-gradient(225deg, rgba(144, 202, 249, 0.3) 0%, rgba(30, 30, 30, 0) 50%, rgba(30, 30, 30, 0) 100%)",
+      "linear-gradient(225deg, rgba(255, 152, 67, 0.4) 0%, rgba(255, 87, 34, 0.2) 50%, rgba(30, 30, 30, 0) 100%)",
     WebkitMask:
       "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
     WebkitMaskComposite: "xor",
@@ -125,21 +125,21 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     backgroundColor: "rgba(13, 17, 23, 0.6)",
     borderRadius: 10,
     "& fieldset": {
-      borderColor: "rgba(144, 202, 249, 0.2)",
+      borderColor: "rgba(255, 152, 67, 0.3)",
       transition: "border-color 0.2s",
     },
     "&:hover fieldset": {
-      borderColor: "rgba(144, 202, 249, 0.5)",
+      borderColor: "rgba(255, 152, 67, 0.6)",
     },
     "&.Mui-focused fieldset": {
-      borderColor: "#90caf9",
+      borderColor: "#ff9843",
     },
     color: "white",
   },
   "& .MuiInputLabel-root": {
     color: "#b0b0b0",
     "&.Mui-focused": {
-      color: "#90caf9",
+      color: "#ff9843",
     },
   },
   "& .MuiInputBase-input::placeholder": {
@@ -155,17 +155,17 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   backgroundColor: "rgba(13, 17, 23, 0.6)",
   borderRadius: 10,
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(144, 202, 249, 0.2)",
+    borderColor: "rgba(255, 152, 67, 0.3)",
   },
   "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(144, 202, 249, 0.5)",
+    borderColor: "rgba(255, 152, 67, 0.6)",
   },
   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#90caf9",
+    borderColor: "#ff9843",
   },
   color: "white",
   "& .MuiSelect-icon": {
-    color: "#90caf9",
+    color: "#ff9843",
   },
 }));
 
@@ -180,12 +180,16 @@ const StyledButton = styled(Button)(({ theme, secondary }) => ({
   transition: "all 0.2s",
   position: "relative",
   overflow: "hidden",
-  backgroundColor: secondary ? "transparent" : "#90caf9",
-  color: secondary ? "#90caf9" : "#0a1929",
-  border: secondary ? "1px solid rgba(144, 202, 249, 0.5)" : "none",
+  background: secondary 
+    ? "transparent" 
+    : "linear-gradient(45deg, #ff5722 30%, #ff9800 90%)",
+  color: secondary ? "#ff9843" : "#ffffff",
+  border: secondary ? "1px solid rgba(255, 152, 67, 0.6)" : "none",
   "&:hover": {
-    backgroundColor: secondary ? "rgba(144, 202, 249, 0.1)" : "#64b5f6",
-    boxShadow: "0 6px 15px rgba(0, 0, 0, 0.3)",
+    background: secondary 
+      ? "rgba(255, 152, 67, 0.15)" 
+      : "linear-gradient(45deg, #e64a19 30%, #f57c00 90%)",
+    boxShadow: "0 6px 15px rgba(255, 87, 34, 0.4)",
     transform: "translateY(-2px)",
   },
   "&::after": {
@@ -213,17 +217,17 @@ const LogoBox = styled(Box)(({ theme }) => ({
   marginBottom: 32,
 }));
 
-// Nouveau style pour la boîte de code 2FA
+// Style pour la boîte de code 2FA avec couleurs chaudes
 const CodeInputBox = styled(Box)(({ theme }) => ({
   marginBottom: 24,
   padding: "12px 16px",
   backgroundColor: "rgba(13, 17, 23, 0.8)",
   borderRadius: 10,
-  border: "1px solid rgba(144, 202, 249, 0.3)",
+  border: "1px solid rgba(255, 152, 67, 0.4)",
   transition: "all 0.2s",
   "&:focus-within": {
-    border: "1px solid rgba(144, 202, 249, 0.8)",
-    boxShadow: "0 0 0 2px rgba(144, 202, 249, 0.2)",
+    border: "1px solid rgba(255, 152, 67, 0.8)",
+    boxShadow: "0 0 0 2px rgba(255, 152, 67, 0.2)",
   },
 }));
 
@@ -236,11 +240,11 @@ const TwoFactorDialog = styled(Dialog)(({ theme }) => ({
     padding: "8px",
     maxWidth: "400px",
     width: "100%",
-    border: "1px solid rgba(144, 202, 249, 0.2)",
+    border: "1px solid rgba(255, 152, 67, 0.3)",
   },
 }));
 
-// Nouveau composant pour les entrées de 2FA
+// Composant pour les entrées de 2FA avec couleurs chaudes
 const OtpInput = styled(TextField)(({ theme, active }) => ({
   width: "48px",
   height: "56px",
@@ -248,7 +252,7 @@ const OtpInput = styled(TextField)(({ theme, active }) => ({
   "& .MuiOutlinedInput-root": {
     height: "100%",
     backgroundColor: active
-      ? "rgba(144, 202, 249, 0.1)"
+      ? "rgba(255, 152, 67, 0.15)"
       : "rgba(13, 17, 23, 0.6)",
     borderRadius: 10,
     "& input": {
@@ -257,20 +261,20 @@ const OtpInput = styled(TextField)(({ theme, active }) => ({
       fontSize: "1.5rem",
       fontWeight: "600",
       fontFamily: "monospace",
-      caretColor: active ? "#90caf9" : "transparent",
+      caretColor: active ? "#ff9843" : "transparent",
     },
     "& fieldset": {
       borderColor: active
-        ? "rgba(144, 202, 249, 0.8)"
-        : "rgba(144, 202, 249, 0.2)",
+        ? "rgba(255, 152, 67, 0.8)"
+        : "rgba(255, 152, 67, 0.3)",
       borderWidth: active ? "2px" : "1px",
       transition: "all 0.2s",
     },
     "&:hover fieldset": {
-      borderColor: "rgba(144, 202, 249, 0.5)",
+      borderColor: "rgba(255, 152, 67, 0.6)",
     },
     "&.Mui-focused fieldset": {
-      borderColor: "#90caf9",
+      borderColor: "#ff9843",
       borderWidth: "2px",
     },
     color: "#ffffff",
@@ -288,7 +292,7 @@ export default function Login() {
   const [formHeight, setFormHeight] = useState("auto");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Nouveaux états pour la 2FA
+  // États pour la 2FA
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [twoFactorUsername, setTwoFactorUsername] = useState("");
   const [twoFactorPassword, setTwoFactorPassword] = useState("");
@@ -799,10 +803,16 @@ export default function Login() {
       onSubmit={handleLoginSubmit}
     >
       <LogoBox>
-        <LockPersonIcon sx={{ fontSize: 40, color: "#90caf9", mb: 2 }} />
+        <LockPersonIcon sx={{ fontSize: 40, color: "#ff9843", mb: 2 }} />
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, mb: 1, color: "#ffffff" }}
+          sx={{ 
+            fontWeight: 700, 
+            mb: 1, 
+            background: "linear-gradient(45deg, #ff5722 30%, #ff9800 90%)",
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
         >
           FireKey
         </Typography>
@@ -830,7 +840,7 @@ export default function Login() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <EmailIcon sx={{ color: "#90caf9" }} />
+              <EmailIcon sx={{ color: "#ff9843" }} />
             </InputAdornment>
           ),
         }}
@@ -848,7 +858,7 @@ export default function Login() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <LockIcon sx={{ color: "#90caf9" }} />
+              <LockIcon sx={{ color: "#ff9843" }} />
             </InputAdornment>
           ),
           endAdornment: (
@@ -873,7 +883,7 @@ export default function Login() {
             onChange={(e) => setRememberMe(e.target.checked)}
             sx={{
               color: "#b0b0b0",
-              "&.Mui-checked": { color: "#90caf9" },
+              "&.Mui-checked": { color: "#ff9843" },
             }}
             disabled={isSubmitting}
           />
@@ -893,7 +903,7 @@ export default function Login() {
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <CircularProgress size={24} sx={{ color: "#0a1929" }} />
+          <CircularProgress size={24} sx={{ color: "#ffffff" }} />
         ) : (
           "Se connecter"
         )}
@@ -905,12 +915,12 @@ export default function Login() {
           sx={{
             color: "#b0b0b0",
             cursor: "pointer",
-            "&:hover": { color: "#90caf9" },
+            "&:hover": { color: "#ff9843" },
           }}
           onClick={handleToggle}
         >
           Vous n'avez pas de compte ?{" "}
-          <span style={{ color: "#90caf9", fontWeight: 500 }}>
+          <span style={{ color: "#ff9843", fontWeight: 500 }}>
             Créer un compte
           </span>
         </Typography>
@@ -927,10 +937,16 @@ export default function Login() {
       onSubmit={handleRegisterSubmit}
     >
       <LogoBox>
-        <SecurityIcon sx={{ fontSize: 40, color: "#90caf9", mb: 2 }} />
+        <SecurityIcon sx={{ fontSize: 40, color: "#ff9843", mb: 2 }} />
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, mb: 1, color: "#ffffff" }}
+          sx={{ 
+            fontWeight: 700, 
+            mb: 1, 
+            background: "linear-gradient(45deg, #ff5722 30%, #ff9800 90%)",
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
         >
           FireKey
         </Typography>
@@ -959,7 +975,7 @@ export default function Login() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <EmailIcon sx={{ color: "#90caf9" }} />
+              <EmailIcon sx={{ color: "#ff9843" }} />
             </InputAdornment>
           ),
         }}
@@ -976,7 +992,7 @@ export default function Login() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <LockIcon sx={{ color: "#90caf9" }} />
+              <LockIcon sx={{ color: "#ff9843" }} />
             </InputAdornment>
           ),
           endAdornment: (
@@ -1005,7 +1021,7 @@ export default function Login() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <LockIcon sx={{ color: "#90caf9" }} />
+              <LockIcon sx={{ color: "#ff9843" }} />
             </InputAdornment>
           ),
           endAdornment: (
@@ -1047,7 +1063,7 @@ export default function Login() {
           };
           return (
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <KeyIcon sx={{ mr: 1, fontSize: 20, color: "#90caf9" }} />
+              <KeyIcon sx={{ mr: 1, fontSize: 20, color: "#ff9843" }} />
               <Typography>{labels[value] || value}</Typography>
             </Box>
           );
@@ -1068,7 +1084,7 @@ export default function Login() {
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <CircularProgress size={24} sx={{ color: "#0a1929" }} />
+          <CircularProgress size={24} sx={{ color: "#ffffff" }} />
         ) : (
           "Créer mon compte"
         )}
@@ -1080,12 +1096,12 @@ export default function Login() {
           sx={{
             color: "#b0b0b0",
             cursor: "pointer",
-            "&:hover": { color: "#90caf9" },
+            "&:hover": { color: "#ff9843" },
           }}
           onClick={handleToggle}
         >
           Vous avez déjà un compte ?{" "}
-          <span style={{ color: "#90caf9", fontWeight: 500 }}>
+          <span style={{ color: "#ff9843", fontWeight: 500 }}>
             Se connecter
           </span>
         </Typography>
@@ -1106,7 +1122,7 @@ export default function Login() {
         </CardContainer>
       </CardWrapper>
 
-      {/* Dialog de 2FA avec interface améliorée */}
+      {/* Dialog de 2FA avec couleurs chaudes */}
       <TwoFactorDialog
         open={twoFactorRequired}
         onClose={() => !isTwoFactorSubmitting && setTwoFactorRequired(false)}
@@ -1124,7 +1140,7 @@ export default function Login() {
             gap: 1,
           }}
         >
-          <VerifiedUserIcon sx={{ color: "#90caf9" }} />
+          <VerifiedUserIcon sx={{ color: "#ff9843" }} />
           Authentification à deux facteurs
         </DialogTitle>
 
@@ -1134,7 +1150,7 @@ export default function Login() {
             d'authentification.
           </Typography>
 
-          {/* Nouveau composant de saisie OTP avec une case par chiffre */}
+          {/* Composant de saisie OTP avec couleurs chaudes */}
           <Box
             sx={{
               display: "flex",
@@ -1168,10 +1184,10 @@ export default function Login() {
           <Alert
             severity="info"
             sx={{
-              backgroundColor: "rgba(33, 150, 243, 0.1)",
-              color: "#90caf9",
+              backgroundColor: "rgba(255, 152, 67, 0.1)",
+              color: "#ff9843",
               "& .MuiAlert-icon": {
-                color: "#90caf9",
+                color: "#ff9843",
               },
             }}
           >
@@ -1200,7 +1216,7 @@ export default function Login() {
             disabled={isTwoFactorSubmitting || otpValues.includes("")}
           >
             {isTwoFactorSubmitting ? (
-              <CircularProgress size={24} sx={{ color: "#0a1929" }} />
+              <CircularProgress size={24} sx={{ color: "#ffffff" }} />
             ) : (
               "Vérifier"
             )}

@@ -46,6 +46,9 @@ import LabelIcon from "@mui/icons-material/Label";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { styled, alpha } from "@mui/material/styles";
 
+// NOUVEAU IMPORT E2E
+import E2EStatusBadge from "../E2EStatusBadge";
+
 const StyledButton = styled(Button)(({ theme }) => ({
   borderRadius: 8,
   padding: "8px 16px",
@@ -286,16 +289,19 @@ const CredentialItem = ({
       // Sinon, essayer de récupérer les détails du credential
       const fetchCredentialDetails = async () => {
         try {
-          const response = await fetch(
-            `http://localhost:8001/api/credentials/${cred.id}/`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
+          // Choisir l'endpoint selon le type de credential
+          const apiEndpoint =
+            cred._source === "e2e"
+              ? `http://localhost:8001/api/credentials-e2e/${cred.id}/`
+              : `http://localhost:8001/api/credentials/${cred.id}/`;
+
+          const response = await fetch(apiEndpoint, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
 
           if (response.ok) {
             const data = await response.json();
@@ -316,7 +322,7 @@ const CredentialItem = ({
         fetchCredentialDetails();
       }
     }
-  }, [cred.id, cred.created_at, accessToken]);
+  }, [cred.id, cred.created_at, cred._source, accessToken]);
 
   // Formater la date de création
   const formatCreationDate = (dateString) => {
@@ -372,9 +378,10 @@ const CredentialItem = ({
 
   // Fonction pour copier la note
   const handleCopyNote = () => {
-    if (cred.note) {
+    const noteContent = cred.note || cred.notes || "";
+    if (noteContent) {
       navigator.clipboard
-        .writeText(cred.note)
+        .writeText(noteContent)
         .then(() => {
           setCopiedNote(true);
           setTimeout(() => setCopiedNote(false), 2000);
@@ -513,6 +520,11 @@ const CredentialItem = ({
     }
   };
 
+  // Récupérer le contenu de la note (compatible E2E et legacy)
+  const getNoteContent = () => {
+    return cred.note || cred.notes || "";
+  };
+
   return (
     <CredentialWrapper>
       {/* Indicateur de force du mot de passe */}
@@ -521,8 +533,9 @@ const CredentialItem = ({
         placement="top-start"
         arrow
       >
-        <PasswordStrengthIndicator strength={passwordStrength}>
-        </PasswordStrengthIndicator>
+        <PasswordStrengthIndicator
+          strength={passwordStrength}
+        ></PasswordStrengthIndicator>
       </Tooltip>
 
       {/* Contenu du credential */}
@@ -551,6 +564,9 @@ const CredentialItem = ({
                 )}
               </Typography>
 
+              {/* NOUVEAU: Badge E2E */}
+              <E2EStatusBadge credential={cred} />
+
               {cred.website && (
                 <Chip
                   label={cred.website}
@@ -559,6 +575,7 @@ const CredentialItem = ({
                     backgroundColor: "rgba(255, 255, 255, 0.1)",
                     color: "#e0e0e0",
                     "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+                    ml: 1,
                   }}
                   icon={
                     <LanguageIcon
@@ -818,8 +835,10 @@ const CredentialItem = ({
                 <NotesIcon sx={{ fontSize: 16, mr: 0.5, color: "#90caf9" }} />
                 Notes:
               </Typography>
-              <NotesField isEmpty={!cred.note || cred.note.trim() === ""}>
-                {cred.note && cred.note.trim() !== "" ? (
+              <NotesField
+                isEmpty={!getNoteContent() || getNoteContent().trim() === ""}
+              >
+                {getNoteContent() && getNoteContent().trim() !== "" ? (
                   <Box sx={{ position: "relative" }}>
                     <Typography
                       variant="body2"
@@ -830,7 +849,7 @@ const CredentialItem = ({
                         pr: 4, // Espace pour le bouton de copie
                       }}
                     >
-                      {cred.note}
+                      {getNoteContent()}
                     </Typography>
                     <Box
                       sx={{
@@ -929,15 +948,36 @@ const CredentialItem = ({
                   </StyledButton>
                 )}
 
-                <StyledButton
-                  variant="outlined"
-                  color="success"
-                  startIcon={<ShareIcon />}
-                  onClick={handleOpenShareModal}
-                  size="small"
-                >
-                  Partager ce credential
-                </StyledButton>
+                {/* MODIFIÉ: Ne montrer le partage que pour les credentials legacy */}
+                {cred._source !== "e2e" && (
+                  <StyledButton
+                    variant="outlined"
+                    color="success"
+                    startIcon={<ShareIcon />}
+                    onClick={handleOpenShareModal}
+                    size="small"
+                  >
+                    Partager ce credential
+                  </StyledButton>
+                )}
+
+                {/* Afficher un message pour les credentials E2E */}
+                {cred._source === "e2e" && (
+                  <Tooltip title="Les credentials E2E ne peuvent pas être partagés car ils sont chiffrés localement">
+                    <Box>
+                      <StyledButton
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<ShareIcon />}
+                        disabled
+                        size="small"
+                        sx={{ opacity: 0.5 }}
+                      >
+                        Partage E2E indisponible
+                      </StyledButton>
+                    </Box>
+                  </Tooltip>
+                )}
               </Box>
 
               <StyledButton
@@ -955,136 +995,62 @@ const CredentialItem = ({
         </Grid>
       </Box>
 
-      {/* Modale de partage */}
-      <StyledDialog
-        open={shareModalOpen}
-        onClose={handleCloseShareModal}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Partager {cred.name}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 3, mt: 1 }}>
-            <Alert
-              severity="info"
-              sx={{
-                backgroundColor: "rgba(33, 150, 243, 0.1)",
-                color: "#90caf9",
-                border: "none",
-                mb: 3,
-              }}
-            >
-              Le lien partagé permet d'accéder une seule fois aux informations
-              du credential sans nécessiter de connexion.
-            </Alert>
-
-            <Typography
-              variant="subtitle1"
-              sx={{ mb: 2, color: "#ffffff", fontWeight: 500 }}
-            >
-              Paramètres du lien
-            </Typography>
-
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="body2"
+      {/* Modale de partage - SEULEMENT pour les credentials legacy */}
+      {cred._source !== "e2e" && (
+        <StyledDialog
+          open={shareModalOpen}
+          onClose={handleCloseShareModal}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Partager {cred.name}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mb: 3, mt: 1 }}>
+              <Alert
+                severity="info"
                 sx={{
-                  mb: 1,
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
+                  backgroundColor: "rgba(33, 150, 243, 0.1)",
+                  color: "#90caf9",
+                  border: "none",
+                  mb: 3,
                 }}
               >
-                <CalendarTodayIcon
-                  fontSize="small"
-                  sx={{ mr: 1, color: "#90caf9" }}
-                />
-                Expiration du lien
+                Le lien partagé permet d'accéder une seule fois aux informations
+                du credential sans nécessiter de connexion.
+              </Alert>
+
+              <Typography
+                variant="subtitle1"
+                sx={{ mb: 2, color: "#ffffff", fontWeight: 500 }}
+              >
+                Paramètres du lien
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Slider
-                  value={expiryDays}
-                  onChange={(e, newValue) => setExpiryDays(newValue)}
-                  step={1}
-                  min={1}
-                  max={30}
-                  valueLabelDisplay="auto"
-                  aria-labelledby="expiry-slider"
-                  sx={{
-                    color: "#90caf9",
-                    "& .MuiSlider-thumb": {
-                      backgroundColor: "#ffffff",
-                    },
-                  }}
-                />
-                <TextField
-                  variant="outlined"
-                  value={expiryDays}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value) && value >= 1 && value <= 30) {
-                      setExpiryDays(value);
-                    }
-                  }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">jours</InputAdornment>
-                    ),
-                  }}
-                  sx={{ ...textFieldStyle, width: "120px" }}
-                />
-              </Box>
-              <FormHelperText sx={{ color: "#b0b0b0" }}>
-                Le lien expirera automatiquement après {expiryDays} jour
-                {expiryDays > 1 ? "s" : ""}.
-              </FormHelperText>
-            </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={accessLimitEnabled}
-                    onChange={(e) => setAccessLimitEnabled(e.target.checked)}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "#ffffff",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <TimerIcon
-                      fontSize="small"
-                      sx={{ mr: 1, color: "#90caf9" }}
-                    />
-                    Limiter le nombre d'accès
-                  </Typography>
-                }
-              />
-
-              {accessLimitEnabled && (
-                <Box
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  variant="body2"
                   sx={{
+                    mb: 1,
+                    color: "#ffffff",
                     display: "flex",
                     alignItems: "center",
-                    gap: 2,
-                    mt: 2,
-                    ml: 4,
                   }}
                 >
+                  <CalendarTodayIcon
+                    fontSize="small"
+                    sx={{ mr: 1, color: "#90caf9" }}
+                  />
+                  Expiration du lien
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <Slider
-                    value={accessLimit}
-                    onChange={(e, newValue) => setAccessLimit(newValue)}
+                    value={expiryDays}
+                    onChange={(e, newValue) => setExpiryDays(newValue)}
                     step={1}
                     min={1}
-                    max={10}
+                    max={30}
                     valueLabelDisplay="auto"
-                    aria-labelledby="access-slider"
+                    aria-labelledby="expiry-slider"
                     sx={{
                       color: "#90caf9",
                       "& .MuiSlider-thumb": {
@@ -1094,100 +1060,176 @@ const CredentialItem = ({
                   />
                   <TextField
                     variant="outlined"
-                    value={accessLimit}
+                    value={expiryDays}
                     onChange={(e) => {
                       const value = parseInt(e.target.value);
-                      if (!isNaN(value) && value >= 1 && value <= 10) {
-                        setAccessLimit(value);
+                      if (!isNaN(value) && value >= 1 && value <= 30) {
+                        setExpiryDays(value);
                       }
                     }}
                     InputProps={{
                       endAdornment: (
-                        <InputAdornment position="end">accès</InputAdornment>
+                        <InputAdornment position="end">jours</InputAdornment>
                       ),
                     }}
                     sx={{ ...textFieldStyle, width: "120px" }}
                   />
                 </Box>
-              )}
-
-              <FormHelperText
-                sx={{ color: "#b0b0b0", ml: accessLimitEnabled ? 4 : 0 }}
-              >
-                {accessLimitEnabled
-                  ? `Le lien sera désactivé après ${accessLimit} utilisation${
-                      accessLimit > 1 ? "s" : ""
-                    }.`
-                  : "Le lien pourra être utilisé un nombre illimité de fois avant expiration."}
-              </FormHelperText>
-            </Box>
-
-            {generatedLink && (
-              <Box sx={{ mt: 4, mb: 2 }}>
-                <Typography
-                  variant="subtitle1"
-                  sx={{ mb: 2, color: "#ffffff", fontWeight: 500 }}
-                >
-                  Lien de partage généré
-                </Typography>
-                <TextField
-                  variant="outlined"
-                  fullWidth
-                  value={generatedLink}
-                  InputProps={{
-                    readOnly: true,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LinkIcon sx={{ color: "#90caf9" }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleCopyLink}
-                          edge="end"
-                          sx={{ color: "#b0b0b0" }}
-                        >
-                          <ContentCopyIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={textFieldStyle}
-                />
-                <FormHelperText sx={{ color: "#4caf50", mt: 1 }}>
-                  Cliquez sur l'icône pour copier le lien
+                <FormHelperText sx={{ color: "#b0b0b0" }}>
+                  Le lien expirera automatiquement après {expiryDays} jour
+                  {expiryDays > 1 ? "s" : ""}.
                 </FormHelperText>
               </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={accessLimitEnabled}
+                      onChange={(e) => setAccessLimitEnabled(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <TimerIcon
+                        fontSize="small"
+                        sx={{ mr: 1, color: "#90caf9" }}
+                      />
+                      Limiter le nombre d'accès
+                    </Typography>
+                  }
+                />
+
+                {accessLimitEnabled && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mt: 2,
+                      ml: 4,
+                    }}
+                  >
+                    <Slider
+                      value={accessLimit}
+                      onChange={(e, newValue) => setAccessLimit(newValue)}
+                      step={1}
+                      min={1}
+                      max={10}
+                      valueLabelDisplay="auto"
+                      aria-labelledby="access-slider"
+                      sx={{
+                        color: "#90caf9",
+                        "& .MuiSlider-thumb": {
+                          backgroundColor: "#ffffff",
+                        },
+                      }}
+                    />
+                    <TextField
+                      variant="outlined"
+                      value={accessLimit}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value) && value >= 1 && value <= 10) {
+                          setAccessLimit(value);
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">accès</InputAdornment>
+                        ),
+                      }}
+                      sx={{ ...textFieldStyle, width: "120px" }}
+                    />
+                  </Box>
+                )}
+
+                <FormHelperText
+                  sx={{ color: "#b0b0b0", ml: accessLimitEnabled ? 4 : 0 }}
+                >
+                  {accessLimitEnabled
+                    ? `Le lien sera désactivé après ${accessLimit} utilisation${
+                        accessLimit > 1 ? "s" : ""
+                      }.`
+                    : "Le lien pourra être utilisé un nombre illimité de fois avant expiration."}
+                </FormHelperText>
+              </Box>
+
+              {generatedLink && (
+                <Box sx={{ mt: 4, mb: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ mb: 2, color: "#ffffff", fontWeight: 500 }}
+                  >
+                    Lien de partage généré
+                  </Typography>
+                  <TextField
+                    variant="outlined"
+                    fullWidth
+                    value={generatedLink}
+                    InputProps={{
+                      readOnly: true,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LinkIcon sx={{ color: "#90caf9" }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={handleCopyLink}
+                            edge="end"
+                            sx={{ color: "#b0b0b0" }}
+                          >
+                            <ContentCopyIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={textFieldStyle}
+                  />
+                  <FormHelperText sx={{ color: "#4caf50", mt: 1 }}>
+                    Cliquez sur l'icône pour copier le lien
+                  </FormHelperText>
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <StyledButton onClick={handleCloseShareModal} color="inherit">
+              Fermer
+            </StyledButton>
+            {!generatedLink ? (
+              <StyledButton
+                onClick={handleGenerateShareLink}
+                variant="contained"
+                color="primary"
+                disabled={isGenerating}
+                startIcon={<ShareIcon />}
+              >
+                {isGenerating ? "Génération..." : "Générer le lien"}
+              </StyledButton>
+            ) : (
+              <StyledButton
+                onClick={handleCopyLink}
+                variant="contained"
+                color="success"
+                startIcon={<ContentCopyIcon />}
+              >
+                Copier le lien
+              </StyledButton>
             )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <StyledButton onClick={handleCloseShareModal} color="inherit">
-            Fermer
-          </StyledButton>
-          {!generatedLink ? (
-            <StyledButton
-              onClick={handleGenerateShareLink}
-              variant="contained"
-              color="primary"
-              disabled={isGenerating}
-              startIcon={<ShareIcon />}
-            >
-              {isGenerating ? "Génération..." : "Générer le lien"}
-            </StyledButton>
-          ) : (
-            <StyledButton
-              onClick={handleCopyLink}
-              variant="contained"
-              color="success"
-              startIcon={<ContentCopyIcon />}
-            >
-              Copier le lien
-            </StyledButton>
-          )}
-        </DialogActions>
-      </StyledDialog>
+          </DialogActions>
+        </StyledDialog>
+      )}
     </CredentialWrapper>
   );
 };
