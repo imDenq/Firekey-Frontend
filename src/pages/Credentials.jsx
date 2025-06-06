@@ -1,4 +1,4 @@
-// src/pages/Credentials.jsx
+// src/pages/Credentials.jsx - Version complète corrigée
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -31,6 +31,11 @@ import {
   Tabs,
   Tab,
   Badge,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  Radio,
+  Switch,
 } from "@mui/material";
 
 import { useSnackbar } from "notistack";
@@ -41,6 +46,7 @@ import PasswordGenerator from "../components/Credentials/PasswordGenerator";
 import TagsManager from "../components/Credentials/TagsManager";
 import TagSelector from "../components/Credentials/TagSelector";
 import HybridCredentialService from "../services/HybridCredentialService";
+import E2ESetupModal from "../components/E2ESetupModal";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -56,6 +62,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import KeyIcon from "@mui/icons-material/Key";
 import TuneIcon from "@mui/icons-material/Tune";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import ShieldIcon from "@mui/icons-material/Shield";
+import CloudIcon from "@mui/icons-material/Cloud";
 
 // Styled components
 const StyledButton = styled(Button)(({ theme, variant }) => ({
@@ -184,6 +192,24 @@ const StyledTabs = styled(Tabs)(({ theme }) => ({
   },
 }));
 
+// Styled Radio pour les méthodes de chiffrement
+const EncryptionMethodCard = styled(Paper)(({ theme, selected }) => ({
+  padding: 16,
+  borderRadius: 12,
+  backgroundColor: selected
+    ? alpha("#90caf9", 0.1)
+    : "rgba(255, 255, 255, 0.05)",
+  border: selected ? "2px solid #90caf9" : "1px solid rgba(255, 255, 255, 0.1)",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: selected
+      ? alpha("#90caf9", 0.15)
+      : "rgba(255, 255, 255, 0.08)",
+    transform: "translateY(-2px)",
+  },
+}));
+
 export default function Credentials() {
   const drawerWidth = 240;
   const { enqueueSnackbar } = useSnackbar();
@@ -195,11 +221,14 @@ export default function Credentials() {
   const [tags, setTags] = useState([]); // Liste des tags disponibles
   const accessToken = localStorage.getItem("accessToken") || "";
 
-  // NOUVEAUX ÉTATS E2E
+  // États E2E corrigés avec état backend
   const [hybridService] = useState(() => new HybridCredentialService());
   const [e2eStatus, setE2eStatus] = useState({
-    available: false,
-    enabled: false,
+    e2eAvailable: false,
+    e2eEnabled: false,
+    e2eUnlocked: false,
+    setupCompleted: false,
+    activatedAt: null,
     isNewUser: false,
   });
   const [showE2ESetup, setShowE2ESetup] = useState(false);
@@ -219,6 +248,7 @@ export default function Credentials() {
   const [verifyPurpose, setVerifyPurpose] = useState(""); // 'unlock' ou 'disableSensitive'
   const [typedPassword, setTypedPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [e2eSetupOpen, setE2eSetupOpen] = useState(false);
 
   // States pour la création d'un nouveau credential
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -231,6 +261,9 @@ export default function Credentials() {
   const [newTags, setNewTags] = useState([]); // Tags pour le nouveau credential
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [activeTabAdd, setActiveTabAdd] = useState(0);
+
+  // État pour choisir la méthode de chiffrement
+  const [encryptionMethod, setEncryptionMethod] = useState("auto"); // "auto", "legacy", "e2e"
 
   // States pour l'édition d'un credential
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -251,20 +284,53 @@ export default function Credentials() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState("");
 
-  // Chargement initial - MODIFIÉ pour E2E
+  // CORRIGÉ: Chargement initial sans double appel
   useEffect(() => {
     const initializeApp = async () => {
-      // Initialiser E2E silencieusement (sans mot de passe pour le moment)
-      const status = await hybridService.initialize();
-      setE2eStatus(status);
+      try {
+        console.log("🚀 Initialisation de l'application...");
 
-      // Charger les credentials et tags
-      await fetchCredentials();
-      await fetchTags();
+        // MODIFIÉ: Initialiser sans mot de passe au premier chargement
+        const status = await hybridService.initialize();
+        console.log("🎯 Status E2E initial:", status);
+        setE2eStatus(status);
+
+        // Charger les credentials et tags
+        await fetchCredentials();
+        await fetchTags();
+
+        console.log("✅ Initialisation terminée");
+      } catch (error) {
+        console.error("❌ Erreur lors de l'initialisation:", error);
+        enqueueSnackbar("Erreur lors de l'initialisation de l'application", {
+          variant: "error",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+      }
     };
 
     initializeApp();
-  }, []);
+  }, []); // IMPORTANT: tableau de dépendances vide pour éviter les re-rendus
+
+  // CORRIGÉ: Fonction pour rafraîchir le statut E2E
+  const refreshE2EStatus = async () => {
+    try {
+      console.log("🔄 Rafraîchissement du statut E2E...");
+
+      // IMPORTANT: Ne pas réinitialiser complètement, juste récupérer le statut
+      const status = await hybridService.getE2EStatus(true); // Force refresh
+
+      // Mettre à jour uniquement les champs de statut, garder l'état de session
+      const currentStatus = await hybridService.initialize();
+      setE2eStatus(currentStatus);
+
+      console.log("✅ Statut E2E rafraîchi:", currentStatus);
+      return currentStatus;
+    } catch (error) {
+      console.error("❌ Erreur rafraîchissement statut E2E:", error);
+      return null;
+    }
+  };
 
   // Filtrer les credentials quand la recherche change ou le filtre change
   useEffect(() => {
@@ -396,10 +462,12 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 1) Récupérer les données - MODIFIÉ pour E2E
+  // 1) Récupérer les données - MODIFIÉ pour utiliser HybridCredentialService
   // ---------------------------------------
   const fetchCredentials = async () => {
     try {
+      console.log("📥 Récupération des credentials...");
+
       // Utiliser le service hybride au lieu de l'API directe
       const allCredentials = await hybridService.getAllCredentials();
 
@@ -411,6 +479,10 @@ export default function Credentials() {
           _source: "legacy",
         })),
       ];
+
+      console.log(
+        `📦 ${combinedCredentials.length} credentials récupérés (${allCredentials.e2e.length} E2E + ${allCredentials.legacy.length} legacy)`
+      );
 
       // Enrichir avec les données de sécurité (comme avant)
       try {
@@ -456,7 +528,7 @@ export default function Credentials() {
         setFilteredCredentials(combinedCredentials);
       }
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erreur récupération credentials:", err);
       enqueueSnackbar("Impossible de récupérer la liste des credentials", {
         variant: "error",
         anchorOrigin: { vertical: "top", horizontal: "right" },
@@ -488,32 +560,60 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // NOUVELLE FONCTION E2E
+  // Fonctions E2E corrigées
   // ---------------------------------------
   const initializeE2E = async () => {
-    const userPassword = prompt("Mot de passe pour activer E2E:");
-    if (!userPassword) return;
+    setE2eSetupOpen(true);
+  };
 
+  // CORRIGÉ: Callback après activation E2E
+  const handleE2EActivationSuccess = async (userPassword) => {
     try {
-      const status = await hybridService.initialize(userPassword);
-      setE2eStatus(status);
+      console.log("🔐 Activation E2E avec mot de passe...");
 
-      if (status.e2eEnabled) {
-        enqueueSnackbar("E2E activé avec succès!", {
-          variant: "success",
-          anchorOrigin: { vertical: "top", horizontal: "right" },
-        });
+      const result = await hybridService.activateE2E(userPassword);
 
-        // Rafraîchir les credentials
-        await fetchCredentials();
-      } else if (status.e2eAvailable) {
-        enqueueSnackbar("Mot de passe incorrect", {
+      if (result.success) {
+        console.log("✅ E2E activé côté backend");
+
+        // IMPORTANT: Attendre un peu puis réinitialiser complètement
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Forcer un refresh complet du statut
+        const newStatus = await hybridService.initialize(userPassword);
+        console.log("🔄 Nouveau statut après activation:", newStatus);
+
+        if (newStatus) {
+          setE2eStatus(newStatus);
+
+          // Vérifier que le service est bien débloqué
+          console.log("🔧 Service débloqué après activation:", {
+            isUnlocked: hybridService.isE2EUnlocked(),
+            isReady:
+              hybridService.isE2EReadyForCreation?.() ||
+              "méthode non disponible",
+          });
+
+          enqueueSnackbar("E2E activé avec succès! 🔒", {
+            variant: "success",
+            anchorOrigin: { vertical: "top", horizontal: "right" },
+          });
+
+          // Rafraîchir les credentials
+          await fetchCredentials();
+
+          // Fermer la modal
+          setE2eSetupOpen(false);
+        }
+      } else {
+        enqueueSnackbar(result.error || "Erreur lors de l'activation E2E", {
           variant: "error",
           anchorOrigin: { vertical: "top", horizontal: "right" },
         });
       }
     } catch (error) {
-      enqueueSnackbar("Erreur activation E2E", {
+      console.error("❌ Erreur activation E2E:", error);
+      enqueueSnackbar("Erreur lors de l'activation E2E", {
         variant: "error",
         anchorOrigin: { vertical: "top", horizontal: "right" },
       });
@@ -521,12 +621,19 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 2) Ajout d'un credential - MODIFIÉ pour E2E
+  // 2) Ajout d'un credential - CORRIGÉ pour E2E
   // ---------------------------------------
   const handleOpenAddModal = () => {
     setAddModalOpen(true);
     setActiveTabAdd(0);
     setNewTags([]);
+
+    // Définir la méthode par défaut basée sur le statut backend
+    if (e2eStatus.e2eEnabled) {
+      setEncryptionMethod("auto"); // Auto = E2E si disponible
+    } else {
+      setEncryptionMethod("legacy");
+    }
   };
 
   const handleCloseAddModal = () => {
@@ -540,7 +647,10 @@ export default function Credentials() {
     setNewTags([]);
     setShowNewPassword(false);
     setActiveTabAdd(0);
+    setEncryptionMethod("auto");
   };
+
+  // CORRIGÉ: Fonction de sauvegarde avec logique E2E améliorée
 
   const handleSaveCredential = async () => {
     if (!newName.trim()) {
@@ -563,10 +673,50 @@ export default function Credentials() {
         tag_ids: newTags.map((tag) => tag.id),
       };
 
-      // Utiliser le service hybride
-      const result = await hybridService.saveCredential(credentialData);
+      console.log("💾 Préparation sauvegarde credential...");
+      console.log("🎯 Méthode de chiffrement sélectionnée:", encryptionMethod);
+      console.log("🔐 État E2E complet:", e2eStatus);
+      console.log("🔧 Service E2E état:", {
+        isUnlocked: hybridService.isE2EUnlocked(),
+        isReady:
+          hybridService.isE2EReadyForCreation?.() || "méthode non disponible",
+      });
+
+      let result;
+
+      // CORRIGÉ: Logique simplifiée pour E2E
+      if (encryptionMethod === "e2e") {
+        // Forcer E2E - Vérifier seulement que c'est activé
+        if (!e2eStatus.e2eEnabled) {
+          throw new Error(
+            "E2E n'est pas activé. Veuillez d'abord activer E2E."
+          );
+        }
+
+        console.log("🔒 Utilisation du chiffrement E2E forcé");
+        result = await hybridService.saveCredentialE2E(credentialData);
+      } else if (encryptionMethod === "auto" && e2eStatus.e2eEnabled) {
+        // Mode auto avec E2E activé - Essayer E2E en premier
+        console.log("🔄 Mode automatique - Tentative E2E");
+        try {
+          result = await hybridService.saveCredentialE2E(credentialData);
+        } catch (e2eError) {
+          console.warn(
+            "⚠️ Échec E2E, basculement vers Legacy:",
+            e2eError.message
+          );
+          // Si E2E échoue, basculer vers Legacy
+          result = await hybridService.saveCredentialLegacy(credentialData);
+        }
+      } else {
+        // Legacy par défaut
+        console.log("🗄️ Utilisation du chiffrement Legacy");
+        result = await hybridService.saveCredentialLegacy(credentialData);
+      }
 
       if (result.success) {
+        console.log("✅ Credential sauvegardé:", result.type);
+
         // Rafraîchir la liste
         await fetchCredentials();
 
@@ -579,9 +729,13 @@ export default function Credentials() {
         );
 
         handleCloseAddModal();
+      } else {
+        throw new Error(
+          result.error || "Erreur inconnue lors de la sauvegarde"
+        );
       }
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erreur sauvegarde credential:", err);
       enqueueSnackbar(err.message, {
         variant: "error",
         anchorOrigin: { vertical: "top", horizontal: "right" },
@@ -590,7 +744,7 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 3) Édition d'un credential
+  // 3) Édition d'un credential - MODIFIÉ
   // ---------------------------------------
   const handleOpenEditModal = (cred) => {
     setEditId(cred.id);
@@ -695,35 +849,22 @@ export default function Credentials() {
         body.password = editPassword;
       }
 
-      const apiEndpoint =
-        currentCred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${editId}/`
-          : `http://localhost:8001/api/credentials/${editId}/`;
+      // MODIFIÉ: Utiliser le service hybride
+      const isE2E = currentCred._source === "e2e";
+      const result = await hybridService.updateCredential(editId, body, isE2E);
 
-      const res = await fetch(apiEndpoint, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
+      if (result.success) {
+        enqueueSnackbar("Credential modifié avec succès", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Erreur edition credential");
+        // Rafraîchir la liste
+        await fetchCredentials();
+        handleCloseEditModal();
       }
-
-      enqueueSnackbar("Credential modifié avec succès", {
-        variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
-
-      // Rafraîchir la liste
-      await fetchCredentials();
-      handleCloseEditModal();
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erreur modification credential:", err);
       enqueueSnackbar(err.message, {
         variant: "error",
         anchorOrigin: { vertical: "top", horizontal: "right" },
@@ -732,13 +873,14 @@ export default function Credentials() {
   };
 
   // ---------------------------------------
-  // 4) Suppression d'un credential
+  // 4) Suppression d'un credential - MODIFIÉ
   // ---------------------------------------
   const handleOpenDeleteModal = (cred) => {
     setDeleteId(cred.id);
     setDeleteName(cred.name);
     setDeleteModalOpen(true);
   };
+
   const handleCloseDeleteModal = () => {
     setDeleteModalOpen(false);
     setDeleteId(null);
@@ -748,33 +890,23 @@ export default function Credentials() {
   const handleConfirmDelete = async () => {
     try {
       const currentCred = credentials.find((c) => c.id === deleteId);
-      const apiEndpoint =
-        currentCred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${deleteId}/`
-          : `http://localhost:8001/api/credentials/${deleteId}/`;
+      const isE2E = currentCred._source === "e2e";
 
-      const res = await fetch(apiEndpoint, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Erreur suppression credential");
+      // MODIFIÉ: Utiliser le service hybride
+      const result = await hybridService.deleteCredential(deleteId, isE2E);
+
+      if (result.success) {
+        enqueueSnackbar("Credential supprimé avec succès", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+
+        // Rafraîchir la liste
+        await fetchCredentials();
+        handleCloseDeleteModal();
       }
-
-      enqueueSnackbar("Credential supprimé avec succès", {
-        variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
-
-      // Rafraîchir la liste
-      await fetchCredentials();
-      handleCloseDeleteModal();
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erreur suppression credential:", err);
       enqueueSnackbar(err.message, {
         variant: "error",
         anchorOrigin: { vertical: "top", horizontal: "right" },
@@ -880,31 +1012,20 @@ export default function Credentials() {
   const patchIsSensitive = async (cred, checked) => {
     try {
       const body = { is_sensitive: checked };
-      const apiEndpoint =
-        cred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${cred.id}/`
-          : `http://localhost:8001/api/credentials/${cred.id}/`;
 
-      const res = await fetch(apiEndpoint, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Erreur maj "sensible"');
+      // MODIFIÉ: Utiliser le service hybride
+      const isE2E = cred._source === "e2e";
+      const result = await hybridService.updateCredential(cred.id, body, isE2E);
+
+      if (result.success) {
+        enqueueSnackbar("Modification enregistrée", {
+          variant: "success",
+          anchorOrigin: { vertical: "top", horizontal: "right" },
+        });
+
+        // Rafraîchir la liste
+        await fetchCredentials();
       }
-
-      enqueueSnackbar("Modification enregistrée", {
-        variant: "success",
-        anchorOrigin: { vertical: "top", horizontal: "right" },
-      });
-
-      // Rafraîchir la liste
-      await fetchCredentials();
     } catch (err) {
       console.error(err);
       enqueueSnackbar(err.message, {
@@ -990,39 +1111,29 @@ export default function Credentials() {
         const pendingEditStr = sessionStorage.getItem("pendingEdit");
 
         if (pendingEditStr) {
-          // C'est une édition complète qui a été interrompée pour vérifier le mot de passe
+          // C'est une édition complète qui a été interrompue pour vérifier le mot de passe
           const pendingEdit = JSON.parse(pendingEditStr);
 
-          const apiEndpoint =
-            verifyModalCred._source === "e2e"
-              ? `http://localhost:8001/api/credentials-e2e/${pendingEdit.id}/`
-              : `http://localhost:8001/api/credentials/${pendingEdit.id}/`;
+          // MODIFIÉ: Utiliser le service hybride
+          const isE2E = verifyModalCred._source === "e2e";
+          const result = await hybridService.updateCredential(
+            pendingEdit.id,
+            pendingEdit,
+            isE2E
+          );
 
-          // Effectuer la mise à jour avec toutes les données d'édition
-          const res = await fetch(apiEndpoint, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(pendingEdit),
-          });
+          if (result.success) {
+            // Supprimer les données d'édition en attente
+            sessionStorage.removeItem("pendingEdit");
 
-          if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error || "Erreur edition credential");
+            enqueueSnackbar("Credential modifié avec succès", {
+              variant: "success",
+              anchorOrigin: { vertical: "top", horizontal: "right" },
+            });
+
+            // Rafraîchir la liste
+            await fetchCredentials();
           }
-
-          // Supprimer les données d'édition en attente
-          sessionStorage.removeItem("pendingEdit");
-
-          enqueueSnackbar("Credential modifié avec succès", {
-            variant: "success",
-            anchorOrigin: { vertical: "top", horizontal: "right" },
-          });
-
-          // Rafraîchir la liste
-          await fetchCredentials();
         } else {
           // C'est juste un changement de l'option "sensible" depuis la liste
           await patchIsSensitive(verifyModalCred, false);
@@ -1174,6 +1285,113 @@ export default function Credentials() {
     sessionStorage.removeItem("pendingEdit");
   }, []);
 
+  // CORRIGÉ: Fonctions pour les badges E2E
+  const renderE2EStatusBadge = () => {
+    if (!e2eStatus.e2eAvailable && !e2eStatus.e2eEnabled) {
+      return null; // Pas de badge si E2E n'est pas disponible ni activé
+    }
+
+    if (e2eStatus.e2eEnabled) {
+      const badgeText = e2eStatus.e2eUnlocked
+        ? "E2E Activé & Débloqué"
+        : "E2E Activé";
+      const badgeColor = e2eStatus.e2eUnlocked ? "#4caf50" : "#ff9800";
+
+      return (
+        <Chip
+          icon={<SecurityIcon />}
+          label={badgeText}
+          color={e2eStatus.e2eUnlocked ? "success" : "warning"}
+          variant="outlined"
+          sx={{
+            backgroundColor: alpha(badgeColor, 0.1),
+            borderColor: badgeColor,
+            color: badgeColor,
+          }}
+        />
+      );
+    } else if (e2eStatus.e2eAvailable) {
+      return (
+        <Chip
+          icon={<LockIcon />}
+          label="E2E Disponible - Cliquez pour activer"
+          color="warning"
+          variant="outlined"
+          onClick={initializeE2E}
+          sx={{
+            backgroundColor: alpha("#ff9800", 0.1),
+            borderColor: "#ff9800",
+            color: "#ff9800",
+            cursor: "pointer",
+            "&:hover": {
+              backgroundColor: alpha("#ff9800", 0.15),
+            },
+          }}
+        />
+      );
+    }
+
+    return null;
+  };
+
+  // CORRIGÉ: Condition pour l'option E2E dans le formulaire
+  const isE2EOptionEnabled = () => {
+    console.log("🔍 Vérification disponibilité E2E:", {
+      enabled: e2eStatus.e2eEnabled,
+      unlocked: e2eStatus.e2eUnlocked,
+      available: e2eStatus.e2eAvailable,
+      setupCompleted: e2eStatus.setupCompleted,
+      serviceUnlocked: hybridService.isE2EUnlocked(),
+      serviceReady:
+        hybridService.isE2EReadyForCreation?.() || "méthode non disponible",
+    });
+
+    // CORRIGÉ: Vérifier seulement si E2E est activé, pas forcément débloqué
+    // Car le déverrouillage peut se faire automatiquement lors de la sauvegarde
+    return e2eStatus.e2eEnabled;
+  };
+
+  // CORRIGÉ: Description des méthodes de chiffrement
+  const getEncryptionMethodDescription = (method) => {
+    switch (method) {
+      case "auto":
+        if (e2eStatus.e2eEnabled) {
+          return e2eStatus.e2eUnlocked
+            ? "Utilise E2E car il est activé et débloqué"
+            : "Utilise E2E (déverrouillage automatique si nécessaire)";
+        } else {
+          return "Chiffrement côté serveur uniquement";
+        }
+      case "legacy":
+        return "Chiffrement côté serveur avec clé maître";
+      case "e2e":
+        if (e2eStatus.e2eEnabled) {
+          return e2eStatus.e2eUnlocked
+            ? "Chiffrement de bout en bout dans votre navigateur"
+            : "E2E activé - déverrouillage automatique lors de la sauvegarde";
+        } else {
+          return "E2E non activé";
+        }
+      default:
+        return "";
+    }
+  };
+
+  // Fonction de debug pour diagnostiquer l'état E2E
+  const debugE2EState = () => {
+    console.log("🔍 État E2E Debug:", {
+      e2eStatus,
+      isE2EUnlocked: hybridService.isE2EUnlocked(),
+      isE2EReady:
+        hybridService.isE2EReadyForCreation?.() || "méthode non disponible",
+    });
+  };
+
+  // Exposer la fonction de debug dans window pour pouvoir l'appeler depuis la console
+  useEffect(() => {
+    window.debugE2E = debugE2EState;
+  }, [e2eStatus]);
+
   // ---------------------------------------
   // Rendu
   // ---------------------------------------
@@ -1205,38 +1423,15 @@ export default function Credentials() {
 
           {/* Badge de statut E2E */}
           <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
-            {e2eStatus.available ? (
-              e2eStatus.enabled ? (
-                <Chip
-                  icon={<SecurityIcon />}
-                  label="E2E Activé"
-                  color="success"
-                  variant="outlined"
-                  sx={{
-                    backgroundColor: alpha("#4caf50", 0.1),
-                    borderColor: "#4caf50",
-                    color: "#4caf50",
-                  }}
-                />
-              ) : (
-                <Chip
-                  icon={<LockIcon />}
-                  label="E2E Disponible - Cliquez pour activer"
-                  color="warning"
-                  variant="outlined"
-                  onClick={initializeE2E}
-                  sx={{
-                    backgroundColor: alpha("#ff9800", 0.1),
-                    borderColor: "#ff9800",
-                    color: "#ff9800",
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: alpha("#ff9800", 0.15),
-                    },
-                  }}
-                />
-              )
-            ) : null}
+            {renderE2EStatusBadge()}
+            {/* Debug info en mode développement */}
+            {process.env.NODE_ENV === "development" && (
+              <Chip
+                size="small"
+                label={`Debug: Available=${e2eStatus.e2eAvailable} Enabled=${e2eStatus.e2eEnabled} Unlocked=${e2eStatus.e2eUnlocked}`}
+                sx={{ fontSize: "10px", opacity: 0.7 }}
+              />
+            )}
           </Box>
 
           <StyledToolbar>
@@ -1705,7 +1900,7 @@ export default function Credentials() {
         </Container>
       </Box>
 
-      {/* Dialog d'ajout */}
+      {/* Dialog d'ajout avec choix de méthode de chiffrement */}
       <StyledDialog
         open={addModalOpen}
         onClose={handleCloseAddModal}
@@ -1744,11 +1939,109 @@ export default function Credentials() {
           >
             {activeTabAdd === 0 && (
               <>
+                {/* Choix de la méthode de chiffrement */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ color: "#ffffff", mb: 2, fontWeight: 500 }}
+                  >
+                    Méthode de chiffrement
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {/* Option Auto */}
+                    <Grid item xs={12} md={4}>
+                      <EncryptionMethodCard
+                        selected={encryptionMethod === "auto"}
+                        onClick={() => setEncryptionMethod("auto")}
+                      >
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                        >
+                          <Radio
+                            checked={encryptionMethod === "auto"}
+                            onChange={() => setEncryptionMethod("auto")}
+                            sx={{ color: "#90caf9", mr: 1 }}
+                          />
+                          <ShieldIcon sx={{ color: "#90caf9", mr: 1 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            Automatique
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
+                          {getEncryptionMethodDescription("auto")}
+                        </Typography>
+                      </EncryptionMethodCard>
+                    </Grid>
+
+                    {/* Option Legacy */}
+                    <Grid item xs={12} md={4}>
+                      <EncryptionMethodCard
+                        selected={encryptionMethod === "legacy"}
+                        onClick={() => setEncryptionMethod("legacy")}
+                      >
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                        >
+                          <Radio
+                            checked={encryptionMethod === "legacy"}
+                            onChange={() => setEncryptionMethod("legacy")}
+                            sx={{ color: "#90caf9", mr: 1 }}
+                          />
+                          <CloudIcon sx={{ color: "#ff9800", mr: 1 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            Serveur
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
+                          {getEncryptionMethodDescription("legacy")}
+                        </Typography>
+                      </EncryptionMethodCard>
+                    </Grid>
+
+                    {/* Option E2E */}
+                    <Grid item xs={12} md={4}>
+                      <EncryptionMethodCard
+                        selected={encryptionMethod === "e2e"}
+                        onClick={() =>
+                          isE2EOptionEnabled() && setEncryptionMethod("e2e")
+                        }
+                        sx={{
+                          opacity: isE2EOptionEnabled() ? 1 : 0.5,
+                          cursor: isE2EOptionEnabled()
+                            ? "pointer"
+                            : "not-allowed",
+                        }}
+                      >
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                        >
+                          <Radio
+                            checked={encryptionMethod === "e2e"}
+                            onChange={() =>
+                              isE2EOptionEnabled() && setEncryptionMethod("e2e")
+                            }
+                            disabled={!isE2EOptionEnabled()}
+                            sx={{ color: "#90caf9", mr: 1 }}
+                          />
+                          <SecurityIcon sx={{ color: "#4caf50", mr: 1 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            E2E
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
+                          {getEncryptionMethodDescription("e2e")}
+                        </Typography>
+                      </EncryptionMethodCard>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* Alerte informative */}
                 <Alert
                   severity="info"
                   sx={{
                     mb: 3,
-                    mt: 2,
                     backgroundColor: "rgba(41, 182, 246, 0.1)",
                     color: "#29b6f6",
                     "& .MuiAlert-icon": {
@@ -1756,24 +2049,34 @@ export default function Credentials() {
                     },
                   }}
                 >
-                  {e2eStatus.enabled
-                    ? "Toutes vos informations sont chiffrées de bout en bout et ne peuvent être lues que par vous."
-                    : "Toutes vos informations sont chiffrées côté serveur avec des standards de sécurité élevés."}
-                  {e2eStatus.enabled && (
-                    <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
-                      <SecurityIcon
-                        sx={{ fontSize: 16, mr: 0.5, color: "#4caf50" }}
-                      />
-                      <Typography
-                        variant="caption"
-                        sx={{ color: "#4caf50", fontWeight: 500 }}
+                  {encryptionMethod === "e2e" && isE2EOptionEnabled() && (
+                    <>
+                      Chiffrement de bout en bout activé - Vos données sont
+                      chiffrées localement.
+                      <Box
+                        sx={{ mt: 1, display: "flex", alignItems: "center" }}
                       >
-                        Mode E2E activé
-                      </Typography>
-                    </Box>
+                        <SecurityIcon
+                          sx={{ fontSize: 16, mr: 0.5, color: "#4caf50" }}
+                        />
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "#4caf50", fontWeight: 500 }}
+                        >
+                          Mode E2E sélectionné
+                        </Typography>
+                      </Box>
+                    </>
                   )}
+                  {encryptionMethod === "legacy" &&
+                    "Chiffrement côté serveur - Vos données sont sécurisées par notre infrastructure."}
+                  {encryptionMethod === "auto" &&
+                    (e2eStatus.e2eEnabled && e2eStatus.e2eUnlocked
+                      ? "Mode automatique - E2E sera utilisé car il est activé et débloqué."
+                      : "Mode automatique - Chiffrement serveur sera utilisé.")}
                 </Alert>
 
+                {/* Formulaire */}
                 <TextField
                   label="Nom"
                   variant="outlined"
@@ -2267,6 +2570,13 @@ export default function Credentials() {
           </StyledButton>
         </DialogActions>
       </StyledDialog>
+
+      {/* Modal d'activation E2E */}
+      <E2ESetupModal
+        open={e2eSetupOpen}
+        onClose={() => setE2eSetupOpen(false)}
+        onSuccess={handleE2EActivationSuccess}
+      />
 
       {/* Gestionnaire de tags */}
       <TagsManager
