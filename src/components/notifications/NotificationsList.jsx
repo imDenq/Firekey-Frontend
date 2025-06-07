@@ -98,7 +98,7 @@ const NotificationsList = ({ onClose }) => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8001/notifications/notifications/', {
+      const response = await fetch('https://firekey.theokaszak.fr/notifications/notifications/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ const NotificationsList = ({ onClose }) => {
   // Marquer une notification comme lue
   const markAsRead = async (notificationId) => {
     try {
-      const response = await fetch(`http://localhost:8001/notifications/notifications/${notificationId}/mark_as_read/`, {
+      const response = await fetch(`https://firekey.theokaszak.fr/notifications/notifications/${notificationId}/mark_as_read/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ const NotificationsList = ({ onClose }) => {
   // Marquer toutes les notifications comme lues
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('http://localhost:8001/notifications/notifications/mark_all_as_read/', {
+      const response = await fetch('https://firekey.theokaszak.fr/notifications/notifications/mark_all_as_read/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

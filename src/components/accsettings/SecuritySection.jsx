@@ -136,7 +136,7 @@ const SecuritySection = ({
     setIsLoadingSessions(true);
     try {
       const response = await fetch(
-        "http://localhost:8001/auth/users/sessions/",
+        "https://firekey.theokaszak.fr/auth/users/sessions/",
         {
           method: "GET",
           headers: {
@@ -170,7 +170,7 @@ const SecuritySection = ({
   const check2FAStatus = async () => {
     try {
       const response = await fetch(
-        "http://localhost:8001/auth/users/two-factor/",
+        "https://firekey.theokaszak.fr/auth/users/two-factor/",
         {
           method: "GET",
           headers: {
@@ -245,7 +245,7 @@ const SecuritySection = ({
 
     try {
       const response = await fetch(
-        "http://localhost:8001/auth/users/change-password/",
+        "https://firekey.theokaszak.fr/auth/users/change-password/",
         {
           method: "POST",
           headers: {
@@ -304,7 +304,7 @@ const SecuritySection = ({
   const handleDeleteAllSessions = async () => {
     try {
       const response = await fetch(
-        "http://localhost:8001/auth/users/sessions/?id=all-except-current",
+        "https://firekey.theokaszak.fr/auth/users/sessions/?id=all-except-current",
         {
           method: "DELETE",
           headers: {
@@ -342,7 +342,7 @@ const SecuritySection = ({
   const handleDeleteSession = async (sessionId) => {
     try {
       const response = await fetch(
-        `http://localhost:8001/auth/users/sessions/?id=${sessionId}`,
+        `https://firekey.theokaszak.fr/auth/users/sessions/?id=${sessionId}`,
         {
           method: "DELETE",
           headers: {
@@ -391,7 +391,7 @@ const SecuritySection = ({
 
       try {
         const response = await fetch(
-          "http://localhost:8001/auth/users/two-factor/",
+          "https://firekey.theokaszak.fr/auth/users/two-factor/",
           {
             method: "GET",
             headers: {
@@ -430,7 +430,7 @@ const SecuritySection = ({
       // Désactiver la 2FA directement
       try {
         const response = await fetch(
-          "http://localhost:8001/auth/users/two-factor/",
+          "https://firekey.theokaszak.fr/auth/users/two-factor/",
           {
             method: "POST",
             headers: {
@@ -501,7 +501,7 @@ const SecuritySection = ({
       }));
 
       const response = await fetch(
-        "http://localhost:8001/auth/users/two-factor/",
+        "https://firekey.theokaszak.fr/auth/users/two-factor/",
         {
           method: "POST",
           headers: {
@@ -583,7 +583,7 @@ const SecuritySection = ({
 
     try {
       const response = await fetch(
-        "http://localhost:8001/auth/users/delete-account/",
+        "https://firekey.theokaszak.fr/auth/users/delete-account/",
         {
           method: "POST",
           headers: {
@@ -636,7 +636,7 @@ const SecuritySection = ({
   const confirmAccountDeletion = async (token) => {
     try {
       const response = await fetch(
-        `http://localhost:8001/auth/confirm-delete-account/?token=${token}`, // Nouvelle URL
+        `https://firekey.theokaszak.fr/auth/confirm-delete-account/?token=${token}`, // Nouvelle URL
         {
           method: "GET", // Méthode GET (pas DELETE)
           headers: {

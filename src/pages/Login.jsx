@@ -1,4 +1,4 @@
-// src/pages/Login.jsx - Ajout du support 2FA avec UI améliorée et thème chaud
+// src/pages/Login.jsx - Ajout du support 2FA avec UI améliorée et logo personnalisé
 import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
@@ -217,6 +217,19 @@ const LogoBox = styled(Box)(({ theme }) => ({
   marginBottom: 32,
 }));
 
+// Composant pour le logo personnalisé
+const CustomLogo = styled("img")(({ theme }) => ({
+  width: "100px",
+  height: "100px",
+  marginBottom: 16,
+  filter: "drop-shadow(0 4px 8px rgba(255, 87, 34, 0.3))",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    transform: "scale(1.05)",
+    filter: "drop-shadow(0 6px 12px rgba(255, 87, 34, 0.5))",
+  },
+}));
+
 // Style pour la boîte de code 2FA avec couleurs chaudes
 const CodeInputBox = styled(Box)(({ theme }) => ({
   marginBottom: 24,
@@ -315,7 +328,7 @@ export default function Login() {
 
           // Tester la validité du token en faisant une requête à une API protégée
           const response = await fetch(
-            "http://localhost:8001/api/credentials/",
+            "https://firekey.theokaszak.fr/api/credentials/",
             {
               method: "GET",
               headers: {
@@ -339,7 +352,7 @@ export default function Login() {
             console.log("Token expiré, tentative de rafraîchissement...");
 
             const refreshResponse = await fetch(
-              "http://localhost:8001/auth/token/refresh/",
+              "https://firekey.theokaszak.fr/auth/token/refresh/",
               {
                 method: "POST",
                 headers: {
@@ -466,7 +479,7 @@ export default function Login() {
       };
       console.log("Corps de la requête login:", JSON.stringify(requestBody));
 
-      const response = await fetch("http://localhost:8001/auth/login/", {
+      const response = await fetch("https://firekey.theokaszak.fr/auth/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -647,7 +660,7 @@ export default function Login() {
 
       // Utiliser le nouvel endpoint spécifique pour la 2FA
       const response = await fetch(
-        "http://localhost:8001/auth/two-factor-auth/",
+        "https://firekey.theokaszak.fr/auth/two-factor-auth/",
         {
           method: "POST",
           headers: {
@@ -755,7 +768,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:8001/auth/register/", {
+      const response = await fetch("https://firekey.theokaszak.fr/auth/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -803,7 +816,23 @@ export default function Login() {
       onSubmit={handleLoginSubmit}
     >
       <LogoBox>
-        <LockPersonIcon sx={{ fontSize: 40, color: "#ff9843", mb: 2 }} />
+        <CustomLogo 
+          src="/logo.png"
+          alt="FireKey Logo"
+          onError={(e) => {
+            // Fallback vers l'icône par défaut si l'image ne se charge pas
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'block';
+          }}
+        />
+        <LockPersonIcon 
+          sx={{ 
+            fontSize: 48, 
+            color: "#ff9843", 
+            mb: 2, 
+            display: 'none' // Caché par défaut, affiché si l'image échoue
+          }} 
+        />
         <Typography
           variant="h4"
           sx={{ 
@@ -937,7 +966,23 @@ export default function Login() {
       onSubmit={handleRegisterSubmit}
     >
       <LogoBox>
-        <SecurityIcon sx={{ fontSize: 40, color: "#ff9843", mb: 2 }} />
+        <CustomLogo 
+          src="/logo.png"
+          alt="FireKey Logo"
+          onError={(e) => {
+            // Fallback vers l'icône par défaut si l'image ne se charge pas
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'block';
+          }}
+        />
+        <SecurityIcon 
+          sx={{ 
+            fontSize: 48, 
+            color: "#ff9843", 
+            mb: 2, 
+            display: 'none' // Caché par défaut, affiché si l'image échoue
+          }} 
+        />
         <Typography
           variant="h4"
           sx={{ 

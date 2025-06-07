@@ -99,7 +99,7 @@ export default function Sidebar({ drawerWidth = 240 }) {
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) return;
 
-      const res = await fetch("http://localhost:8001/api/credentials/", {
+      const res = await fetch("https://firekey.theokaszak.fr/api/credentials/", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@ export default function Sidebar({ drawerWidth = 240 }) {
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) return;
 
-      const res = await fetch("http://localhost:8001/auth/users/me/", {
+      const res = await fetch("https://firekey.theokaszak.fr/auth/users/me/", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

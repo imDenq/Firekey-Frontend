@@ -20,7 +20,7 @@ export default function ProtectedRoute({ children }) {
         }
 
         // Vérifier le token en appelant un endpoint protégé
-        const response = await fetch('http://localhost:8001/auth/protected/', {
+        const response = await fetch('https://firekey.theokaszak.fr/auth/protected/', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -39,7 +39,7 @@ export default function ProtectedRoute({ children }) {
           const refreshToken = localStorage.getItem('refreshToken');
           
           if (refreshToken) {
-            const refreshResponse = await fetch('http://localhost:8001/auth/token/refresh/', {
+            const refreshResponse = await fetch('https://firekey.theokaszak.fr/auth/token/refresh/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

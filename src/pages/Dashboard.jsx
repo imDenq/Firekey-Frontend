@@ -150,7 +150,7 @@ export default function Dashboard() {
   const fetchSecurityAuditDataSilently = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken') || '';
-      const res = await fetch('http://localhost:8001/api/security/silent_audit/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/security/silent_audit/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -315,7 +315,7 @@ export default function Dashboard() {
   // Fonction pour récupérer les credentials
   const fetchCredentials = async () => {
     try {
-      const res = await fetch('http://localhost:8001/api/credentials/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/credentials/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -342,7 +342,7 @@ export default function Dashboard() {
   // Fonction pour récupérer les partages
   const fetchShares = async () => {
     try {
-      const res = await fetch('http://localhost:8001/api/shares/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/shares/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

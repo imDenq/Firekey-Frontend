@@ -133,7 +133,7 @@ export default function ProfileSection({
         selectedFile.size
       );
 
-      const res = await fetch("http://localhost:8001/auth/users/photo/", {
+      const res = await fetch("https://firekey.theokaszak.fr/auth/users/photo/", {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -172,7 +172,7 @@ export default function ProfileSection({
       if (profilePicUrl && !profilePicUrl.startsWith("http")) {
         // Ajouter un timestamp pour éviter la mise en cache du navigateur
         const timestamp = new Date().getTime();
-        profilePicUrl = `http://localhost:8001${profilePicUrl}?t=${timestamp}`;
+        profilePicUrl = `https://firekey.theokaszak.fr${profilePicUrl}?t=${timestamp}`;
       }
 
       enqueueSnackbar("Photo de profil mise à jour", {
@@ -223,7 +223,7 @@ export default function ProfileSection({
         },
       };
 
-      const res = await fetch("http://localhost:8001/auth/users/me/", {
+      const res = await fetch("https://firekey.theokaszak.fr/auth/users/me/", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

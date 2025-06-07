@@ -487,7 +487,7 @@ export default function Credentials() {
       // Enrichir avec les données de sécurité (comme avant)
       try {
         const securityRes = await fetch(
-          "http://localhost:8001/api/security/dashboard/",
+          "https://firekey.theokaszak.fr/api/security/dashboard/",
           {
             method: "GET",
             headers: {
@@ -538,7 +538,7 @@ export default function Credentials() {
 
   const fetchTags = async () => {
     try {
-      const res = await fetch("http://localhost:8001/api/tags/", {
+      const res = await fetch("https://firekey.theokaszak.fr/api/tags/", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -956,7 +956,7 @@ export default function Credentials() {
 
       // Pour les credentials legacy
       const res = await fetch(
-        `http://localhost:8001/api/credentials/${cred.id}/decrypt/`,
+        `https://firekey.theokaszak.fr/api/credentials/${cred.id}/decrypt/`,
         {
           method: "GET",
           headers: {
@@ -1046,8 +1046,8 @@ export default function Credentials() {
       // 1) Vérifier le mot de passe de compte
       const apiEndpoint =
         verifyModalCred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${verifyModalCred.id}/verify/`
-          : `http://localhost:8001/api/credentials/${verifyModalCred.id}/verify/`;
+          ? `https://firekey.theokaszak.fr/api/credentials-e2e/${verifyModalCred.id}/verify/`
+          : `https://firekey.theokaszak.fr/api/credentials/${verifyModalCred.id}/verify/`;
 
       const verifyRes = await fetch(apiEndpoint, {
         method: "POST",
@@ -1078,7 +1078,7 @@ export default function Credentials() {
         } else {
           // Pour legacy, on appelle decrypt
           const decryptRes = await fetch(
-            `http://localhost:8001/api/credentials/${verifyModalCred.id}/decrypt/`,
+            `https://firekey.theokaszak.fr/api/credentials/${verifyModalCred.id}/decrypt/`,
             {
               method: "GET",
               headers: {
@@ -1162,8 +1162,8 @@ export default function Credentials() {
       const currentCred = credentials.find((c) => c.id === credentialId);
       const apiEndpoint =
         currentCred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${credentialId}/add_tag/`
-          : `http://localhost:8001/api/credentials/${credentialId}/add_tag/`;
+          ? `https://firekey.theokaszak.fr/api/credentials-e2e/${credentialId}/add_tag/`
+          : `https://firekey.theokaszak.fr/api/credentials/${credentialId}/add_tag/`;
 
       const res = await fetch(apiEndpoint, {
         method: "POST",
@@ -1199,8 +1199,8 @@ export default function Credentials() {
       const currentCred = credentials.find((c) => c.id === credentialId);
       const apiEndpoint =
         currentCred._source === "e2e"
-          ? `http://localhost:8001/api/credentials-e2e/${credentialId}/remove_tag/`
-          : `http://localhost:8001/api/credentials/${credentialId}/remove_tag/`;
+          ? `https://firekey.theokaszak.fr/api/credentials-e2e/${credentialId}/remove_tag/`
+          : `https://firekey.theokaszak.fr/api/credentials/${credentialId}/remove_tag/`;
 
       const res = await fetch(apiEndpoint, {
         method: "POST",

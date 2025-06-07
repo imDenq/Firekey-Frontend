@@ -81,7 +81,7 @@ npm run dev
 
 ### Variables d'Environnement
 ```env
-VITE_API_URL=http://localhost:8001
+VITE_API_URL=https://firekey.theokaszak.fr:8001
 VITE_APP_NAME=FireKey
 VITE_APP_VERSION=1.0.0
 ```

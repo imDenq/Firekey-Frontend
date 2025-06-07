@@ -188,7 +188,7 @@ const E2ESetupModal = ({ open, onClose, onSuccess }) => {
       const accessToken = localStorage.getItem('accessToken');
       console.log('🔑 Token d\'accès récupéré');
 
-      const response = await fetch('http://localhost:8001/api/credentials-e2e/activate_e2e/', {
+      const response = await fetch('https://firekey.theokaszak.fr/api/credentials-e2e/activate_e2e/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

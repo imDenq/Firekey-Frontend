@@ -45,7 +45,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        "http://localhost:8001/auth/users/e2e_status/",
+        "https://firekey.theokaszak.fr/auth/users/e2e_status/",
         {
           method: "GET",
           headers: {
@@ -91,7 +91,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        "http://localhost:8001/api/key-derivation/",
+        "https://firekey.theokaszak.fr/api/key-derivation/",
         {
           method: "GET",
           headers: {
@@ -218,11 +218,11 @@ class HybridCredentialService {
       console.log("📡 Envoi de la requête d'activation E2E...");
       console.log(
         "🎯 URL:",
-        "http://localhost:8001/api/credentials-e2e/activate_e2e/"
+        "https://firekey.theokaszak.fr/api/credentials-e2e/activate_e2e/"
       );
 
       const response = await fetch(
-        "http://localhost:8001/api/credentials-e2e/activate_e2e/",
+        "https://firekey.theokaszak.fr/api/credentials-e2e/activate_e2e/",
         {
           method: "POST",
           headers: {
@@ -288,7 +288,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        "http://localhost:8001/api/credentials-e2e/deactivate_e2e/",
+        "https://firekey.theokaszak.fr/api/credentials-e2e/deactivate_e2e/",
         {
           method: "POST",
           headers: {
@@ -586,7 +586,7 @@ class HybridCredentialService {
       // 1. Toujours récupérer les credentials legacy
       try {
         const legacyResponse = await fetch(
-          "http://localhost:8001/api/credentials/",
+          "https://firekey.theokaszak.fr/api/credentials/",
           {
             method: "GET",
             headers: {
@@ -649,7 +649,7 @@ class HybridCredentialService {
         if (this.sessionState.e2eUnlocked) {
           try {
             const e2eResponse = await fetch(
-              "http://localhost:8001/api/credentials-e2e/",
+              "https://firekey.theokaszak.fr/api/credentials-e2e/",
               {
                 method: "GET",
                 headers: {
@@ -777,7 +777,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        "http://localhost:8001/api/credentials-e2e/",
+        "https://firekey.theokaszak.fr/api/credentials-e2e/",
         {
           method: "POST",
           headers: {
@@ -813,7 +813,7 @@ class HybridCredentialService {
 
       this.updateAccessToken();
 
-      const response = await fetch("http://localhost:8001/api/credentials/", {
+      const response = await fetch("https://firekey.theokaszak.fr/api/credentials/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -869,9 +869,9 @@ class HybridCredentialService {
           body = credentialData;
         }
 
-        endpoint = `http://localhost:8001/api/credentials-e2e/${credentialId}/`;
+        endpoint = `https://firekey.theokaszak.fr/api/credentials-e2e/${credentialId}/`;
       } else {
-        endpoint = `http://localhost:8001/api/credentials/${credentialId}/`;
+        endpoint = `https://firekey.theokaszak.fr/api/credentials/${credentialId}/`;
         body = credentialData;
       }
 
@@ -916,8 +916,8 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const endpoint = isE2E
-        ? `http://localhost:8001/api/credentials-e2e/${credentialId}/`
-        : `http://localhost:8001/api/credentials/${credentialId}/`;
+        ? `https://firekey.theokaszak.fr/api/credentials-e2e/${credentialId}/`
+        : `https://firekey.theokaszak.fr/api/credentials/${credentialId}/`;
 
       const response = await fetch(endpoint, {
         method: "DELETE",
@@ -952,7 +952,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        `http://localhost:8001/api/credentials-e2e/search/?q=${encodeURIComponent(
+        `https://firekey.theokaszak.fr/api/credentials-e2e/search/?q=${encodeURIComponent(
           query
         )}`,
         {
@@ -1016,7 +1016,7 @@ class HybridCredentialService {
       this.updateAccessToken();
 
       const response = await fetch(
-        "http://localhost:8001/api/credentials-e2e/migrate_from_legacy/",
+        "https://firekey.theokaszak.fr/api/credentials-e2e/migrate_from_legacy/",
         {
           method: "POST",
           headers: {

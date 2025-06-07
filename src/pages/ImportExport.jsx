@@ -439,7 +439,7 @@ const ImportExport = () => {
 
   // Récupérer le token d'accès
   const accessToken = localStorage.getItem("accessToken") || "";
-  const API_URL = "http://localhost:8001";
+  const API_URL = "https://firekey.theokaszak.fr";
   const IMPORT_EXPORT_API = `${API_URL}/api/import-export`;
 
   // Création d'une instance axios

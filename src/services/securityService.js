@@ -3,7 +3,7 @@
  * Service pour les fonctionnalités de sécurité et d'audit
  */
 
-const API_URL = 'http://localhost:8001';
+const API_URL = 'https://firekey.theokaszak.fr';
 
 /**
  * Récupère les données pour le tableau de bord de sécurité

@@ -115,7 +115,7 @@ const ShareItem = ({ share, onEditClick, onDeleteClick }) => {
   const hasAccessLimit = maxAccesses !== null;
   
   // Construction de l'URL complète
-  const shareUrl = `http://localhost:5173/share/${shareId}`;
+  const shareUrl = `https://firekey.theokaszak.fr/share/${shareId}`;
   
   // Déterminer le statut d'expiration
   let expirationStatus = 'active';

@@ -69,7 +69,7 @@ export default function Profile() {
   // 1) Récupérer infos de l'utilisateur
   const fetchUserInfo = async () => {
     try {
-      const res = await fetch('http://localhost:8001/auth/users/me/', {
+      const res = await fetch('https://firekey.theokaszak.fr/auth/users/me/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export default function Profile() {
         if (!profilePicUrl.startsWith('http')) {
           // Sinon on ajoute le préfixe de l'API et un paramètre anti-cache
           const timestamp = new Date().getTime();
-          profilePicUrl = `http://localhost:8001${profilePicUrl}?t=${timestamp}`;
+          profilePicUrl = `https://firekey.theokaszak.fr${profilePicUrl}?t=${timestamp}`;
         }
       }
       
@@ -128,7 +128,7 @@ export default function Profile() {
   // Récupérer les logs d'audit pour trouver la première activité de l'utilisateur
   const fetchUserAuditLog = async () => {
     try {
-      const res = await fetch('http://localhost:8001/api/security/audit_log/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/security/audit_log/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ export default function Profile() {
   // 2) Récupérer le nombre de credentials
   const fetchCredentialsCount = async () => {
     try {
-      const res = await fetch('http://localhost:8001/api/credentials/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/credentials/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

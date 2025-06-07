@@ -151,7 +151,7 @@ export default function SharedCredential() {
         setLoading(true);
         // Ajout d'un paramètre de cache-busting pour éviter les requêtes en double du navigateur
         const cacheBuster = Date.now();
-        const response = await fetch(`http://localhost:8001/api/share/${shareId}/${accessKey}/?_=${cacheBuster}`);
+        const response = await fetch(`https://firekey.theokaszak.fr/api/share/${shareId}/${accessKey}/?_=${cacheBuster}`);
         
         if (!isMounted) return; // Vérifier à nouveau après la requête
         

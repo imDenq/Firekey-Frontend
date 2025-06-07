@@ -150,7 +150,7 @@ export default function Topbar({ drawerWidth = 240 }) {
       const accessToken = localStorage.getItem('accessToken')
       if (!accessToken) return
       
-      const res = await fetch('http://localhost:8001/auth/users/me/', {
+      const res = await fetch('https://firekey.theokaszak.fr/auth/users/me/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export default function Topbar({ drawerWidth = 240 }) {
         let profilePicUrl = data.profile.profile_pic
         if (!profilePicUrl.startsWith('http')) {
           const timestamp = new Date().getTime()
-          profilePicUrl = `http://localhost:8001${profilePicUrl}?t=${timestamp}`
+          profilePicUrl = `https://firekey.theokaszak.fr${profilePicUrl}?t=${timestamp}`
         }
         console.log('URL photo de profil dans Topbar:', profilePicUrl)
         setProfilePic(profilePicUrl)
@@ -191,7 +191,7 @@ export default function Topbar({ drawerWidth = 240 }) {
       
       setLoadingNotifications(true)
       
-      const res = await fetch('http://localhost:8001/notifications/notifications/unread_count/', {
+      const res = await fetch('https://firekey.theokaszak.fr/notifications/notifications/unread_count/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

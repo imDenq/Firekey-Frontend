@@ -191,7 +191,7 @@ const TagsManager = ({ open, onClose, onTagsChange }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8001/api/tags/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/tags/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ const TagsManager = ({ open, onClose, onTagsChange }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8001/api/tags/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/tags/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,7 +270,7 @@ const TagsManager = ({ open, onClose, onTagsChange }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:8001/api/tags/${tagId}/`, {
+      const res = await fetch(`https://firekey.theokaszak.fr/api/tags/${tagId}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

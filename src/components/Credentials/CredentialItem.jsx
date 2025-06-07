@@ -292,8 +292,8 @@ const CredentialItem = ({
           // Choisir l'endpoint selon le type de credential
           const apiEndpoint =
             cred._source === "e2e"
-              ? `http://localhost:8001/api/credentials-e2e/${cred.id}/`
-              : `http://localhost:8001/api/credentials/${cred.id}/`;
+              ? `https://firekey.theokaszak.fr/api/credentials-e2e/${cred.id}/`
+              : `https://firekey.theokaszak.fr/api/credentials/${cred.id}/`;
 
           const response = await fetch(apiEndpoint, {
             method: "GET",
@@ -436,7 +436,7 @@ const CredentialItem = ({
       console.log("Payload envoyé:", JSON.stringify(payload));
       console.log("Credential ID:", cred.id, "Type:", typeof cred.id);
 
-      const response = await fetch("http://localhost:8001/api/shares/", {
+      const response = await fetch("https://firekey.theokaszak.fr/api/shares/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -452,7 +452,7 @@ const CredentialItem = ({
       }
 
       const data = await response.json();
-      const shareUrl = `http://localhost:5173/share/${data.share_id}`;
+      const shareUrl = `https://firekey.theokaszak.fr/share/${data.share_id}`;
       setGeneratedLink(shareUrl);
     } catch (error) {
       console.error("Erreur:", error);

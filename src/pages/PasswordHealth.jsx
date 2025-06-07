@@ -341,7 +341,7 @@ export default function PasswordHealth() {
     setIsLoading(true);
     try {
       // Récupérer les credentials
-      const credRes = await fetch('http://localhost:8001/api/credentials/', {
+      const credRes = await fetch('https://firekey.theokaszak.fr/api/credentials/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

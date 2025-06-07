@@ -219,7 +219,7 @@ export default function ShareManager() {
     setError(null);
     
     try {
-      const res = await fetch('http://localhost:8001/api/shares/', {
+      const res = await fetch('https://firekey.theokaszak.fr/api/shares/', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ export default function ShareManager() {
     if (!deleteShare) return;
 
     try {
-      const res = await fetch(`http://localhost:8001/api/shares/${deleteShare.id}/`, {
+      const res = await fetch(`https://firekey.theokaszak.fr/api/shares/${deleteShare.id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +320,7 @@ export default function ShareManager() {
         max_access_count: editAccessLimitEnabled ? editAccessLimit : null
       };
 
-      const res = await fetch(`http://localhost:8001/api/shares/${editShare.id}/`, {
+      const res = await fetch(`https://firekey.theokaszak.fr/api/shares/${editShare.id}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
